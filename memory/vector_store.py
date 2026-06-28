@@ -1,8 +1,9 @@
 """
 Векторное хранилище на Supabase pgvector.
 
-Три публичных функции:
-  save()         — сохранить текст + эмбеддинг в таблицу embeddings
+Публичные функции:
+  save()         — сохранить один чанк
+  save_batch()   — сохранить список чанков одним INSERT (предпочтительно)
   search()       — найти похожие куски по запросу (cosine similarity)
   is_saturated() — проверить, набрал ли батч отзывов <5% новых тем
 
@@ -57,15 +58,46 @@ def save(
     agent: str,
     source_url: str = "",
 ) -> None:
-    """Сохранить один текстовый чанк в pgvector-память."""
-    _client().table("embeddings").insert({
-        "run_id": run_id,
-        "user_id": user_id,
-        "content": content,
-        "embedding": embed(content),
-        "agent": agent,
-        "source_url": source_url,
-    }).execute()
+    """Сохранить один текстовый чанк. Для батча используй save_batch()."""
+    save_batch(
+        run_id=run_id,
+        user_id=user_id,
+        agent=agent,
+        items=[{"content": content, "source_url": source_url}],
+    )
+
+
+def save_batch(
+    *,
+    run_id: str,
+    user_id: str,
+    agent: str,
+    items: list[dict],
+) -> None:
+    """
+    Сохранить список чанков одним INSERT-запросом.
+
+    items: список словарей {content: str, source_url?: str}
+
+    Эмбеддинги генерируются батчем (один проход модели вместо N),
+    INSERT — один запрос вместо N. Используй для сохранения отзывов.
+    """
+    if not items:
+        return
+    texts = [item["content"] for item in items]
+    vectors = _model().encode(texts, normalize_embeddings=True).tolist()
+    rows = [
+        {
+            "run_id": run_id,
+            "user_id": user_id,
+            "content": item["content"],
+            "embedding": vector,
+            "agent": agent,
+            "source_url": item.get("source_url", ""),
+        }
+        for item, vector in zip(items, vectors)
+    ]
+    _client().table("embeddings").insert(rows).execute()
 
 
 def search(
