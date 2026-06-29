@@ -237,9 +237,60 @@ report_task             → context: [все выше]
 ```
 `_print_results` теперь выводит секцию конкурентов (рейтинг, цена, топ-1 плюс/минус).
 
-### Следующий шаг — Stage 6: Next.js Frontend + FastAPI
+---
 
-По `TODOS.md`:
-- FastAPI: `POST /analyze`, `GET /analyze/{run_id}`, JWT auth middleware
-- Next.js на Vercel: Supabase Auth, BYOK-страница, форма анализа, polling статуса
-- Cost warning modal, report view, docx download (signed URL)
+## 2026-06-29 — Stage 6: FastAPI Backend + Next.js Frontend (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`api/auth.py`**
+JWT-верификация через PyJWT: проверяет Bearer-токен, HS256, audience="authenticated".
+Возвращает `user_id` (sub из payload). Используется как `Depends(verify_jwt)`.
+
+**`api/runner.py`**
+`ThreadPoolExecutor(max_workers=4)` — запускает полный 7-агентный pipeline в фоне.
+`start_analysis_run()` создаёт запись в `analysis_runs`, запускает `_run_crew()` и возвращает `run_id` немедленно.
+`_run_crew()` вызывает `crew.kickoff()`, обновляет статус на completed/failed.
+
+**`api/routes/analyze.py`**
+- `POST /analyze`: валидирует company/period, вызывает `start_analysis_run()`, возвращает `{run_id, status}`.
+- `GET /analyze/{run_id}`: **P0 security** — сравнивает `run["user_id"] == JWT.sub` перед возвратом, 403 при несовпадении.
+
+**`api/main.py`**
+FastAPI app с CORS (origins из env `CORS_ORIGINS`), включает analyze router.
+Запуск: `uvicorn api.main:app --log-level warning --no-access-log` (P1: скрывает URL из логов).
+
+**`frontend/`** — Next.js 14 на TypeScript
+
+| Файл | Назначение |
+|---|---|
+| `src/lib/supabase.ts` | Supabase client (anon key) |
+| `src/lib/api.ts` | `startAnalysis()`, `getAnalysisRun()`, `getSignedDocxUrl()`, `pollUntilDone()` |
+| `src/app/layout.tsx` | Root layout |
+| `src/app/page.tsx` | Landing с CTA |
+| `src/app/auth/page.tsx` | Supabase Auth UI (email/pass) |
+| `src/app/settings/page.tsx` | BYOK — upsert в `user_api_keys` |
+| `src/app/dashboard/page.tsx` | Форма анализа + список прошлых запусков |
+| `src/app/results/[runId]/page.tsx` | Polling каждые 5 сек пока status=running, отображает ReportView, кнопка Download .docx |
+| `src/components/AnalysisForm.tsx` | Форма с cost warning modal перед Opus |
+| `src/components/ReportView.tsx` | Executive summary, темы, SWOT, рекомендации |
+| `src/components/CompetitorMatrix.tsx` | Таблица конкурентов с цветовой кодировкой рейтинга |
+
+**Supabase migration: `create_user_api_keys`**
+Таблица `user_api_keys` (uuid PK, user_id FK → auth.users, keys jsonb).
+RLS: каждый пользователь видит только свою строку. Trigger `updated_at`.
+
+### Деплой
+
+**Backend (Railway):**
+```
+uvicorn api.main:app --host 0.0.0.0 --port $PORT --log-level warning --no-access-log
+```
+Env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `CORS_ORIGINS`.
+
+**Frontend (Vercel):**
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_API_URL=https://your-railway-app.up.railway.app
+```

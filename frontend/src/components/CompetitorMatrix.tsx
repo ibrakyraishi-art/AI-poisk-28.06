@@ -1,0 +1,50 @@
+"use client";
+
+interface Competitor {
+  name: string;
+  rating?: number;
+  price_model?: string;
+  top_strength?: string;
+  top_weakness?: string;
+}
+
+interface Props {
+  competitors: Competitor[];
+}
+
+export function CompetitorMatrix({ competitors }: Props) {
+  if (!competitors.length) return null;
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="bg-gray-100 text-left">
+            <th className="px-4 py-2 font-semibold">Competitor</th>
+            <th className="px-4 py-2 font-semibold">Rating</th>
+            <th className="px-4 py-2 font-semibold">Pricing</th>
+            <th className="px-4 py-2 font-semibold">Top strength</th>
+            <th className="px-4 py-2 font-semibold">Top weakness</th>
+          </tr>
+        </thead>
+        <tbody>
+          {competitors.map((c, i) => (
+            <tr key={c.name} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+              <td className="px-4 py-2 font-medium">{c.name}</td>
+              <td className="px-4 py-2">
+                {c.rating != null ? (
+                  <span className={c.rating >= 4.5 ? "text-green-700" : c.rating >= 4.0 ? "text-yellow-700" : "text-red-600"}>
+                    {c.rating.toFixed(1)} ★
+                  </span>
+                ) : "—"}
+              </td>
+              <td className="px-4 py-2">{c.price_model ?? "—"}</td>
+              <td className="px-4 py-2 text-green-700">{c.top_strength ?? "—"}</td>
+              <td className="px-4 py-2 text-red-600">{c.top_weakness ?? "—"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

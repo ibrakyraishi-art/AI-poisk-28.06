@@ -1,0 +1,89 @@
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+const KEY_FIELDS = [
+  { id: "anthropic_api_key", label: "Anthropic API Key", placeholder: "sk-ant-..." },
+  { id: "google_api_key", label: "Google AI API Key", placeholder: "AIza..." },
+  { id: "serper_api_key", label: "Serper API Key (web search)", placeholder: "..." },
+  { id: "news_api_key", label: "NewsAPI Key (optional)", placeholder: "..." },
+];
+
+export default function SettingsPage() {
+  const router = useRouter();
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      if (!data.session) router.push("/auth");
+    });
+  }, [router]);
+
+  async function handleSave(e: FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSaved(false);
+
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return router.push("/auth");
+
+    // Upsert into user_api_keys table (one row per user, jsonb column "keys")
+    const { error: dbErr } = await supabase
+      .from("user_api_keys")
+      .upsert({ user_id: session.user.id, keys: values }, { onConflict: "user_id" });
+
+    if (dbErr) setError(dbErr.message);
+    else setSaved(true);
+  }
+
+  return (
+    <main className="max-w-lg mx-auto mt-16 px-4">
+      <h1 className="text-2xl font-bold mb-2">API Keys (BYOK)</h1>
+      <p className="text-sm text-gray-500 mb-8">
+        Keys are stored encrypted in your private Supabase row — never shared.
+      </p>
+
+      <form onSubmit={handleSave} className="space-y-5">
+        {KEY_FIELDS.map(({ id, label, placeholder }) => (
+          <div key={id}>
+            <label className="block text-sm font-medium mb-1" htmlFor={id}>
+              {label}
+            </label>
+            <input
+              id={id}
+              type="password"
+              placeholder={placeholder}
+              className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              value={values[id] ?? ""}
+              onChange={(ev) => setValues((v) => ({ ...v, [id]: ev.target.value }))}
+              autoComplete="off"
+            />
+          </div>
+        ))}
+
+        {error && <p className="text-red-600 text-sm">{error}</p>}
+        {saved && <p className="text-green-600 text-sm">Saved!</p>}
+
+        <div className="flex gap-3">
+          <button
+            type="submit"
+            className="rounded-lg bg-indigo-600 px-5 py-2 text-white font-semibold hover:bg-indigo-700 transition-colors"
+          >
+            Save keys
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="rounded-lg border px-5 py-2 font-semibold hover:bg-gray-50 transition-colors"
+          >
+            Dashboard
+          </button>
+        </div>
+      </form>
+    </main>
+  );
+}
