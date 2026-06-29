@@ -41,6 +41,8 @@ def start_analysis_run(
         "period": period,
         "status": "running",
     }).execute()
+    if not result.data:
+        raise RuntimeError("Failed to create analysis run — Supabase insert returned no data")
     run_id: str = result.data[0]["id"]
 
     _executor.submit(_run_crew, run_id=run_id, user_id=user_id,
