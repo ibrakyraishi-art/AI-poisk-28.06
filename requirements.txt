@@ -1,8 +1,12 @@
 # ── Core AI framework ───────────────────────────────────────────────────────
-# ВАЖНО: зафиксировать точную версию до Stage 4 (ConditionalTask API нестабилен)
-# После первой установки запусти: pip freeze | grep crewai >> requirements.txt
+# <1.0.0 обязательно: crewai 1.x сломал три вещи, от которых мы зависим:
+#   1. output_pydantic= убран из Task (заменён на structured output иного вида)
+#   2. ConditionalTask перенесён / переименован — Stage 4 сломается
+#   3. LLM-провайдеры теперь отдельные extras (crewai[anthropic] и т.д.),
+#      поэтому наши litellm-строки ("claude-haiku-4-5-20251001") перестают работать
+# Поднимать до 1.x только после проверки всех трёх пунктов и миграции кода.
 crewai>=0.80.0,<1.0.0
-crewai-tools>=0.14.0
+crewai-tools>=0.14.0,<1.0.0
 
 # ── Embeddings (локально, без API-ключей) ────────────────────────────────────
 sentence-transformers>=2.7.0
