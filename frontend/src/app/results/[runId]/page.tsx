@@ -100,7 +100,7 @@ export default function ResultsPage() {
       )}
 
       {run.status === "completed" && run.report_json && (
-        <ReportView report={run.report_json as Parameters<typeof ReportView>[0]["report"]} />
+        <ReportView report={run.report_json as unknown as Parameters<typeof ReportView>[0]["report"]} />
       )}
     </main>
   );
