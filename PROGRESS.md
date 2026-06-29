@@ -161,10 +161,45 @@ Report Writer  ←  context JSON → .docx → Supabase Storage
    `ANTHROPIC_API_KEY` (или `GOOGLE_API_KEY`), опционально `NEWS_API_KEY`.
 3. `pip install -r requirements.txt`
 
-### Следующий шаг — Stage 4: Manager + ConditionalTask
+---
+
+## 2026-06-29 — Stage 4: Manager + Process.hierarchical + ConditionalTask (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`requirements.txt`** — зафиксирован `crewai>=0.80.0,<1.0.0` с комментарием
+о трёх breaking changes в 1.x: убран `output_pydantic=`, переименован
+`ConditionalTask`, сломаны litellm-строки модели. `crewai-tools<1.0.0` тоже.
+
+**`agents/manager_agent.py`**
+- `create_manager_agent()`: `allow_delegation=True`, нет инструментов.
+- Передаётся в `Crew(manager_agent=...)`, НЕ в `agents=[]`.
+- Дефолтная модель: `sonnet` — Manager читает JSON-выводы агентов, нужно понимание.
+
+**`main.py`** — переключён на `Process.hierarchical` + добавлен `ConditionalTask`:
+
+```
+reviews_task          → всегда выполняется
+retry_reviews_task    → ConditionalTask, выполняется если _needs_review_retry()=True
+news_task             → всегда выполняется
+analyst_task          → context: [reviews, retry_reviews, news]
+report_task           → context: [reviews, retry_reviews, news, analyst]
+```
+
+**`_needs_review_retry(task_output)`**: читает `task_output.pydantic` (ReviewData),
+возвращает True если `review_count < 10` или `confidence < 0.7`.
+Manager вызывает эту функцию автоматически перед `retry_reviews_task`.
+
+**Эскалация периода**: `30d → 90d → 6m` (константа `_PERIOD_ESCALATION`).
+При retry агент получает расширенный период в описании задачи.
+
+**Analyst и Report** получают оба reviews-таска в `context=`:
+если retry запустился — видят оба вывода и берут более полный.
+
+### Следующий шаг — Stage 5: Business Context + Competitor Finder
 
 По `TODOS.md`:
-- Зафиксировать точную версию `crewai` (`pip freeze | grep crewai`).
-- `agents/manager_agent.py` — Manager с `Process.hierarchical`.
-- `ConditionalTask` для Reviews: если `confidence < 0.7` → повторить с `90d`.
-- Переключить `main.py` на `Process.hierarchical`.
+- `agents/business_context_agent.py`
+- `agents/competitor_finder_agent.py` — SerperDev web search
+- Конкурентная матрица JSON (≥2 конкурентов, все критерии)
+- Заполнить `ReportData.competitors` (сейчас пустой список)
