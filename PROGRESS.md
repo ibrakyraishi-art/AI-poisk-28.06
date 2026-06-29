@@ -196,10 +196,50 @@ Manager вызывает эту функцию автоматически пер
 **Analyst и Report** получают оба reviews-таска в `context=`:
 если retry запустился — видят оба вывода и берут более полный.
 
-### Следующий шаг — Stage 5: Business Context + Competitor Finder
+---
+
+## 2026-06-29 — Stage 5: Business Context + Competitor Finder (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`** — два новых типа:
+- `BusinessContextData`: category, target_audience, key_differentiators,
+  `main_competitors` (список имён → передаётся Competitor Finder), market_context.
+- `CompetitorFinderOutput`: обёртка над `list[CompetitorProfile]` с confidence.
+
+**`tools/serper_search_tool.py`**
+Общий инструмент для обоих агентов Stage 5. POST на `google.serper.dev/search`.
+10 mock-результатов (сравнения, цены, рейтинги, рыночная статистика) когда
+`SERPER_API_KEY` не задан. Результаты не сохраняются автоматически — агент решает сам.
+
+**`agents/business_context_agent.py`**
+3 поисковых запроса: категория, аудитория, конкуренты. `output_pydantic=BusinessContextData`.
+`main_competitors` — "мост" к Competitor Finder через `context=`. Модель: haiku.
+
+**`agents/competitor_finder_agent.py`**
+2 веб-поиска на каждого конкурента (рейтинг+цена, функции+отзывы).
+`max_iter=12` (до 5 конкурентов × 2 поиска + сохранения). `output_pydantic=CompetitorFinderOutput`.
+`COMPETITOR_MIN_COUNT=2` используется в тексте задачи. Модель: haiku.
+
+**`agents/report_writer_agent.py`** — обновлён `create_report_task()`:
+`competitors` теперь берётся из CompetitorFinderOutput в context (не пустой список).
+Рекомендации должны ссылаться на конкурентов по имени.
+
+**`main.py`** — полный 7-задачный pipeline:
+```
+reviews_task            → всегда
+retry_reviews_task      → ConditionalTask
+business_context_task   → рыночный контекст
+news_task               → новости
+competitor_finder_task  → context: [business_context_task]
+analyst_task            → context: [reviews × 2, news_task]
+report_task             → context: [все выше]
+```
+`_print_results` теперь выводит секцию конкурентов (рейтинг, цена, топ-1 плюс/минус).
+
+### Следующий шаг — Stage 6: Next.js Frontend + FastAPI
 
 По `TODOS.md`:
-- `agents/business_context_agent.py`
-- `agents/competitor_finder_agent.py` — SerperDev web search
-- Конкурентная матрица JSON (≥2 конкурентов, все критерии)
-- Заполнить `ReportData.competitors` (сейчас пустой список)
+- FastAPI: `POST /analyze`, `GET /analyze/{run_id}`, JWT auth middleware
+- Next.js на Vercel: Supabase Auth, BYOK-страница, форма анализа, polling статуса
+- Cost warning modal, report view, docx download (signed URL)
