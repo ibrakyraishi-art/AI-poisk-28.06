@@ -40,6 +40,21 @@ class ReviewData(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# News Agent output
+# ---------------------------------------------------------------------------
+
+class NewsData(BaseModel):
+    """Вывод News Agent: статьи и упоминания в прессе."""
+    company: str
+    period: str
+    article_count: int
+    key_developments: list[str]      # важные события: обновления, финансирование, etc.
+    sentiment_summary: str           # общий тон прессы о компании
+    confidence: float = Field(ge=0.0, le=1.0)
+    articles_saved_to_memory: int = 0
+
+
+# ---------------------------------------------------------------------------
 # Analyst Agent output
 # ---------------------------------------------------------------------------
 
