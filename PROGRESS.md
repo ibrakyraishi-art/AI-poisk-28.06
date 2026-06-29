@@ -1,0 +1,296 @@
+# PROGRESS.md — журнал прогресса CompetitorScope
+
+**Правило:** после каждого значимого изменения добавлять новую запись
+с датой — что сделано и почему. При старте новой сессии читать этот файл первым.
+
+---
+
+## 2026-06-28 — Инфраструктура Supabase + Stage 1
+
+### Supabase (проект `competitor-scope`, id: `nqpeidlfkcxucgqykyrv`)
+
+- **pgvector включён** (`CREATE EXTENSION vector`) — тип данных `vector(384)` теперь доступен в БД
+- **Таблица `analysis_runs`** — хранит статус каждого анализа (pending→running→completed/failed),
+  прогресс, JSON-результат, путь к docx. RLS включён.
+- **Таблица `embeddings`** — RAG-память: тексты агентов + 384-мерные векторы.
+  HNSW индекс на `vector_cosine_ops` — быстрый поиск по косинусному сходству. RLS включён.
+- **Supabase Auth** — встроен, `auth.users` подтверждена; к ней FK из обеих таблиц.
+- **RLS-политики** — каждый пользователь видит только свои строки (`auth.uid() = user_id`).
+  Python backend (Railway) использует service key → обходит RLS.
+- **`fail_stale_runs()`** — SQL-функция, помечает "running" jobs старше 45 мин как "failed".
+  Причина: если Railway-контейнер упадёт, job зависает в running навсегда.
+- **pg_cron** — расписание `*/10 * * * *` вызывает `fail_stale_runs()`. Watchdog работает.
+- **`match_embeddings(query, run_id, limit)`** — SQL RPC-функция для косинусного поиска
+  через `<=>` оператор. Используется в `vector_store.search()`.
+
+### Stage 1 — config + memory layer (`c6e0a17`)
+
+**`config/llm_config.py`**
+Реестр моделей с LiteLLM-идентификаторами (`gemini/gemini-1.5-flash`, `claude-sonnet-4-6` и др.).
+`get_litellm_id(key)` → строка для CrewAI. `DEFAULTS` → умолчания по агентам.
+`needs_cost_warning()` → сигнал UI показать предупреждение перед Opus.
+
+**`config/limits.py`**
+Все числа-пороги в одном файле: `MAX_REVIEWS=200`, `BATCH_SIZE=50`,
+`COSINE_THRESHOLD=0.85`, `NEW_TOPIC_MIN_RATIO=0.05`, `MAX_RETRIES=2`.
+
+**`memory/vector_store.py`**
+- `save_batch()` — батчевый INSERT: N чанков = 1 запрос к Supabase + 1 проход модели.
+  Реализовано сразу после ревью (одиночный save был N запросов).
+- `save()` — тонкая обёртка над `save_batch()` для одного чанка.
+- `search()` — вызывает `match_embeddings()` RPC, возвращает top-k похожих записей.
+- `is_saturated()` — стоп-сигнал для Reviews Agent: True если <5% батча новых тем.
+- Ленивая загрузка модели и клиента (первый вызов инициализирует, потом кэш).
+- Валидация env-переменных с понятным сообщением об ошибке.
+
+### Открытые слабые места (из ревью)
+
+| # | Проблема | Приоритет | Когда чинить |
+|---|---------|-----------|-------------|
+| 1 | `is_saturated()` делает N запросов к Supabase (N = батч) | Medium | До Stage 3 (оптимизация, не блокер) |
+| 2 | Скрытая зависимость от `match_embeddings()` SQL-функции | Low | README или startup-check |
+| 3 | Глобальный `_client_instance` усложняет тесты | Low | Перед написанием тестов |
+| 4 | Нет retry при падении Supabase-соединения | Medium | Перед продом |
+
+---
+
+## 2026-06-29 — Stage 2: Reviews Agent (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`**
+Pydantic-схемы для всех агентов: `ReviewTheme`, `ReviewData`, `AnalystOutput`,
+`CompetitorProfile`, `ReportData`. `confidence` в ReviewData/AnalystOutput управляет
+ConditionalTask retry-логикой в Stage 4.
+
+**`tools/memory_save_tool.py` / `tools/memory_search_tool.py`**
+CrewAI-инструменты (`BaseTool`) над `vector_store.save()` и `vector_store.search()`.
+`run_id` / `user_id` хранятся как Pydantic-поля инструмента — изолируют каждый запуск.
+`MemorySearchTool` возвращает результаты с меткой агента и score — LLM видит контекст.
+
+**`agents/reviews_agent.py`**
+- `FetchAndSaveReviewsTool`: один вызов от LLM → весь пайплайн (скрейп → батч по 50 →
+  saturation check → save_batch). LLM не управляет циклом, только вызывает инструмент.
+- Фолбэк: любое исключение скрейпера → загружается `tests/fixtures/app_store_reviews.json`
+  (50 реалистичных отзывов: батарея, краши, цена, GPS, UI).
+- `create_reviews_agent()` / `create_reviews_task()` — фабрики для Stage 4 (Manager).
+- `output_pydantic=ReviewData` — CrewAI требует JSON по схеме, retry если не совпадает.
+
+**`main.py`**
+- CLI: `python main.py --company FitTrack --period 30d [--model sonnet]`
+- Создаёт `analysis_runs` запись (status=running), обновляет на completed/failed.
+- Работает без Supabase (локальный run_id fallback).
+- Предупреждение о стоимости перед Opus.
+- Красивый вывод в консоль: темы с тональностью и цитатами.
+
+**`tests/fixtures/app_store_reviews.json`**
+50 реалистичных отзывов fitness-приложения. Темы: battery, crashes, price/subscription,
+GPS accuracy, sync bugs, UI/UX, customer support, features.
+
+### Открытые слабые места (Stage 2)
+
+| # | Проблема | Приоритет | Когда чинить |
+|---|---------|-----------|-------------|
+| 1 | `is_saturated()` делает N запросов к Supabase | Medium | До Stage 4 |
+| 2 | Скрейперы не протестированы с реальными app_id | Medium | Перед первым реальным запуском |
+| 3 | `result.pydantic` может быть None при LLM-сбое | Low | Добавить retry в main.py |
+| 4 | Нет `requirements.txt` | High | Перед первым запуском |
+
+---
+
+---
+
+## 2026-06-29 — Stage 3: полный 4-агентный pipeline (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`** — добавлен `NewsData` (company, period, article_count,
+key_developments, sentiment_summary, confidence, articles_saved_to_memory).
+
+**`agents/news_agent.py`**
+- `NewsSearchTool`: запросы к newsapi-python (4 поисковые фразы по шаблону).
+  Фолбэк: 10 mock-статей, если `NEWS_API_KEY` не задан или API упал.
+  Агент сам решает, какие статьи релевантны, и вызывает `memory_save` —
+  не сохраняем всё подряд автоматически.
+- Дефолтная модель: `gemini-flash` (задача простая — найди и сохрани).
+
+**`agents/analyst_agent.py`**
+- Только `MemorySearchTool` — без внешних запросов.
+  Читает из pgvector то, что Reviews + News агенты уже туда положили.
+- 6 поисковых запросов покрывают все квадранты SWOT.
+- Также получает структурированный JSON предыдущих агентов через `context=`.
+- Дефолтная модель: `sonnet` (синтез сложнее сбора данных).
+- `max_iter=10` — больше итераций для 6 поисковых запросов.
+
+**`agents/report_writer_agent.py`**
+- `GenerateReportTool`: принимает полный ReportData JSON → создаёт .docx
+  (python-docx) → загружает в Supabase Storage `reports/{run_id}/report.docx`.
+  Фолбэк: сохраняет в `output/` локально если Storage недоступен.
+- `output_pydantic=ReportData` — структурированный JSON и docx генерируются
+  одновременно.
+- `max_iter=6` — меньше итераций (данные уже готовы, задача — написать и сохранить).
+
+**`tasks/research_tasks.py`** — полностью рефакторен:
+все 4 функции `make_*_task()` делегируют в соответствующие agent-модули.
+Нет дублирования Task-определений.
+
+**`main.py`** — обновлён для полного 4-агентного запуска:
+- Создаёт 4 агента + 4 задачи с правильной цепочкой `context=`.
+- `--model` переопределяет модель у всех агентов одновременно.
+- `_finish_run()` теперь сохраняет `report_docx_path` в `analysis_runs`.
+- `_print_results()` выводит executive summary, SWOT, инсайты, рекомендации.
+
+### Архитектура pipeline (Stage 3)
+
+```
+Reviews Agent  →  pgvector (embeddings)
+                      ↓
+News Agent     →  pgvector (embeddings)
+                      ↓
+Analyst Agent  ←  pgvector search + context JSON
+                      ↓
+Report Writer  ←  context JSON → .docx → Supabase Storage
+                      ↓
+              analysis_runs.report_json / report_docx_path
+```
+
+### Что нужно перед первым запуском Stage 3
+
+1. Создать бакет "reports" в Supabase Storage (Dashboard → Storage → New bucket).
+2. Задать переменные в `.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+   `ANTHROPIC_API_KEY` (или `GOOGLE_API_KEY`), опционально `NEWS_API_KEY`.
+3. `pip install -r requirements.txt`
+
+---
+
+## 2026-06-29 — Stage 4: Manager + Process.hierarchical + ConditionalTask (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`requirements.txt`** — зафиксирован `crewai>=0.80.0,<1.0.0` с комментарием
+о трёх breaking changes в 1.x: убран `output_pydantic=`, переименован
+`ConditionalTask`, сломаны litellm-строки модели. `crewai-tools<1.0.0` тоже.
+
+**`agents/manager_agent.py`**
+- `create_manager_agent()`: `allow_delegation=True`, нет инструментов.
+- Передаётся в `Crew(manager_agent=...)`, НЕ в `agents=[]`.
+- Дефолтная модель: `sonnet` — Manager читает JSON-выводы агентов, нужно понимание.
+
+**`main.py`** — переключён на `Process.hierarchical` + добавлен `ConditionalTask`:
+
+```
+reviews_task          → всегда выполняется
+retry_reviews_task    → ConditionalTask, выполняется если _needs_review_retry()=True
+news_task             → всегда выполняется
+analyst_task          → context: [reviews, retry_reviews, news]
+report_task           → context: [reviews, retry_reviews, news, analyst]
+```
+
+**`_needs_review_retry(task_output)`**: читает `task_output.pydantic` (ReviewData),
+возвращает True если `review_count < 10` или `confidence < 0.7`.
+Manager вызывает эту функцию автоматически перед `retry_reviews_task`.
+
+**Эскалация периода**: `30d → 90d → 6m` (константа `_PERIOD_ESCALATION`).
+При retry агент получает расширенный период в описании задачи.
+
+**Analyst и Report** получают оба reviews-таска в `context=`:
+если retry запустился — видят оба вывода и берут более полный.
+
+---
+
+## 2026-06-29 — Stage 5: Business Context + Competitor Finder (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`** — два новых типа:
+- `BusinessContextData`: category, target_audience, key_differentiators,
+  `main_competitors` (список имён → передаётся Competitor Finder), market_context.
+- `CompetitorFinderOutput`: обёртка над `list[CompetitorProfile]` с confidence.
+
+**`tools/serper_search_tool.py`**
+Общий инструмент для обоих агентов Stage 5. POST на `google.serper.dev/search`.
+10 mock-результатов (сравнения, цены, рейтинги, рыночная статистика) когда
+`SERPER_API_KEY` не задан. Результаты не сохраняются автоматически — агент решает сам.
+
+**`agents/business_context_agent.py`**
+3 поисковых запроса: категория, аудитория, конкуренты. `output_pydantic=BusinessContextData`.
+`main_competitors` — "мост" к Competitor Finder через `context=`. Модель: haiku.
+
+**`agents/competitor_finder_agent.py`**
+2 веб-поиска на каждого конкурента (рейтинг+цена, функции+отзывы).
+`max_iter=12` (до 5 конкурентов × 2 поиска + сохранения). `output_pydantic=CompetitorFinderOutput`.
+`COMPETITOR_MIN_COUNT=2` используется в тексте задачи. Модель: haiku.
+
+**`agents/report_writer_agent.py`** — обновлён `create_report_task()`:
+`competitors` теперь берётся из CompetitorFinderOutput в context (не пустой список).
+Рекомендации должны ссылаться на конкурентов по имени.
+
+**`main.py`** — полный 7-задачный pipeline:
+```
+reviews_task            → всегда
+retry_reviews_task      → ConditionalTask
+business_context_task   → рыночный контекст
+news_task               → новости
+competitor_finder_task  → context: [business_context_task]
+analyst_task            → context: [reviews × 2, news_task]
+report_task             → context: [все выше]
+```
+`_print_results` теперь выводит секцию конкурентов (рейтинг, цена, топ-1 плюс/минус).
+
+---
+
+## 2026-06-29 — Stage 6: FastAPI Backend + Next.js Frontend (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`api/auth.py`**
+JWT-верификация через PyJWT: проверяет Bearer-токен, HS256, audience="authenticated".
+Возвращает `user_id` (sub из payload). Используется как `Depends(verify_jwt)`.
+
+**`api/runner.py`**
+`ThreadPoolExecutor(max_workers=4)` — запускает полный 7-агентный pipeline в фоне.
+`start_analysis_run()` создаёт запись в `analysis_runs`, запускает `_run_crew()` и возвращает `run_id` немедленно.
+`_run_crew()` вызывает `crew.kickoff()`, обновляет статус на completed/failed.
+
+**`api/routes/analyze.py`**
+- `POST /analyze`: валидирует company/period, вызывает `start_analysis_run()`, возвращает `{run_id, status}`.
+- `GET /analyze/{run_id}`: **P0 security** — сравнивает `run["user_id"] == JWT.sub` перед возвратом, 403 при несовпадении.
+
+**`api/main.py`**
+FastAPI app с CORS (origins из env `CORS_ORIGINS`), включает analyze router.
+Запуск: `uvicorn api.main:app --log-level warning --no-access-log` (P1: скрывает URL из логов).
+
+**`frontend/`** — Next.js 14 на TypeScript
+
+| Файл | Назначение |
+|---|---|
+| `src/lib/supabase.ts` | Supabase client (anon key) |
+| `src/lib/api.ts` | `startAnalysis()`, `getAnalysisRun()`, `getSignedDocxUrl()`, `pollUntilDone()` |
+| `src/app/layout.tsx` | Root layout |
+| `src/app/page.tsx` | Landing с CTA |
+| `src/app/auth/page.tsx` | Supabase Auth UI (email/pass) |
+| `src/app/settings/page.tsx` | BYOK — upsert в `user_api_keys` |
+| `src/app/dashboard/page.tsx` | Форма анализа + список прошлых запусков |
+| `src/app/results/[runId]/page.tsx` | Polling каждые 5 сек пока status=running, отображает ReportView, кнопка Download .docx |
+| `src/components/AnalysisForm.tsx` | Форма с cost warning modal перед Opus |
+| `src/components/ReportView.tsx` | Executive summary, темы, SWOT, рекомендации |
+| `src/components/CompetitorMatrix.tsx` | Таблица конкурентов с цветовой кодировкой рейтинга |
+
+**Supabase migration: `create_user_api_keys`**
+Таблица `user_api_keys` (uuid PK, user_id FK → auth.users, keys jsonb).
+RLS: каждый пользователь видит только свою строку. Trigger `updated_at`.
+
+### Деплой
+
+**Backend (Railway):**
+```
+uvicorn api.main:app --host 0.0.0.0 --port $PORT --log-level warning --no-access-log
+```
+Env vars: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`, `CORS_ORIGINS`.
+
+**Frontend (Vercel):**
+```
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+NEXT_PUBLIC_API_URL=https://your-railway-app.up.railway.app
+```

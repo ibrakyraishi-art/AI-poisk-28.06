@@ -1,0 +1,43 @@
+{"id":"sec-001","title":"Job ownership check on GET /analyze/{run_id}","stage":"security","priority":"P0","description":"Verify analysis_runs.user_id matches JWT sub before returning data"}
+{"id":"sec-002","title":"Scrub LLM keys from FastAPI logs","stage":"security","priority":"P1","description":"SecretStr wrapper, WARNING log level, no-access-log in prod"}
+{"id":"sec-003","title":"Watchdog for stuck running jobs","stage":"security","priority":"P1","description":"Cron every 10 min: mark analysis_runs running > 45 min as failed"}
+{"id":"infra-001","title":"Create Supabase project + enable pgvector","stage":"infra","priority":"P0","worktree":"C"}
+{"id":"infra-002","title":"Run schema migrations: analysis_runs, embeddings, HNSW index","stage":"infra","priority":"P0","worktree":"C"}
+{"id":"infra-003","title":"Enable Supabase Auth","stage":"infra","priority":"P0","worktree":"C"}
+{"id":"infra-004","title":"Set up Supabase Vault for LLM keys","stage":"infra","priority":"P0","worktree":"C"}
+{"id":"infra-005","title":"Create Supabase Storage bucket reports","stage":"infra","priority":"P0","worktree":"C"}
+{"id":"infra-006","title":"Deploy Python backend skeleton to Railway","stage":"infra","priority":"P0","worktree":"A"}
+{"id":"infra-007","title":"Set Railway env vars","stage":"infra","priority":"P0","worktree":"A"}
+{"id":"s1-001","title":"config/llm_config.py","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-002","title":"config/limits.py","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-003","title":"memory/vector_store.py (pgvector)","stage":"stage1","priority":"P1","worktree":"A","note":"NOT ChromaDB"}
+{"id":"s1-004","title":"tools/memory_save_tool.py","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-005","title":"tools/memory_search_tool.py","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-006","title":"models/schemas.py (ReviewData)","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-007","title":"agents/reviews_agent.py with saturation stop","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s1-008","title":"main.py entry point","stage":"stage1","priority":"P1","worktree":"A"}
+{"id":"s2-001","title":"agents/news_agent.py","stage":"stage2","priority":"P1","worktree":"A"}
+{"id":"s2-002","title":"models/schemas.py NewsData","stage":"stage2","priority":"P1","worktree":"A"}
+{"id":"s2-003","title":"tasks/research_tasks.py sequential pipeline","stage":"stage2","priority":"P1","worktree":"A"}
+{"id":"s3-001","title":"models/schemas.py AnalystOutput ReportData CompetitorProfile","stage":"stage3","priority":"P1","worktree":"A"}
+{"id":"s3-002","title":"agents/analyst_agent.py","stage":"stage3","priority":"P1","worktree":"A"}
+{"id":"s3-003","title":"agents/report_writer_agent.py + docx generation","stage":"stage3","priority":"P1","worktree":"A"}
+{"id":"s3-004","title":"Upload docx to Supabase Storage","stage":"stage3","priority":"P1","worktree":"A"}
+{"id":"s3-005","title":"Write report_json to analysis_runs","stage":"stage3","priority":"P1","worktree":"A"}
+{"id":"s4-001","title":"agents/manager_agent.py","stage":"stage4","priority":"P1","worktree":"A"}
+{"id":"s4-002","title":"Switch to Process.hierarchical","stage":"stage4","priority":"P1","worktree":"A"}
+{"id":"s4-003","title":"ConditionalTask callback in tasks/research_tasks.py","stage":"stage4","priority":"P1","worktree":"A"}
+{"id":"s4-004","title":"Pin crewai version in requirements.txt","stage":"stage4","priority":"P0","worktree":"A","note":"Must do before Stage 4; ConditionalTask API unstable"}
+{"id":"s5-001","title":"agents/business_context_agent.py","stage":"stage5","priority":"P1","worktree":"A"}
+{"id":"s5-002","title":"agents/competitor_finder_agent.py (SerperDev)","stage":"stage5","priority":"P1","worktree":"A"}
+{"id":"s5-003","title":"Competitor matrix JSON output","stage":"stage5","priority":"P1","worktree":"A"}
+{"id":"s6-001","title":"FastAPI POST /analyze endpoint","stage":"stage6","priority":"P1","worktree":"A"}
+{"id":"s6-002","title":"FastAPI GET /analyze/{run_id} with ownership check","stage":"stage6","priority":"P0","worktree":"A"}
+{"id":"s6-003","title":"Supabase JWT auth middleware for FastAPI","stage":"stage6","priority":"P0","worktree":"A"}
+{"id":"s6-004","title":"Next.js project scaffold on Vercel","stage":"stage6","priority":"P1","worktree":"B"}
+{"id":"s6-005","title":"Supabase Auth integration in Next.js","stage":"stage6","priority":"P0","worktree":"B"}
+{"id":"s6-006","title":"BYOK page: enter LLM keys → Vault","stage":"stage6","priority":"P0","worktree":"B"}
+{"id":"s6-007","title":"Analysis form with LLM dropdowns","stage":"stage6","priority":"P1","worktree":"B"}
+{"id":"s6-008","title":"Cost warning modal before Opus","stage":"stage6","priority":"P1","worktree":"B"}
+{"id":"s6-009","title":"Job status polling every 5s from analysis_runs","stage":"stage6","priority":"P1","worktree":"B"}
+{"id":"s6-010","title":"Report view + docx download (signed URL)","stage":"stage6","priority":"P1","worktree":"B"}
