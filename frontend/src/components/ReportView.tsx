@@ -5,26 +5,23 @@ import { CompetitorMatrix } from "./CompetitorMatrix";
 interface Theme {
   theme: string;
   sentiment: "positive" | "negative" | "mixed";
-  count: number;
-  sample_quote?: string;
+  review_count: number;
+  examples?: string[];
 }
 
-interface SwotItem {
-  point: string;
-}
-
-interface Recommendation {
-  priority: "high" | "medium" | "low";
-  action: string;
-  rationale: string;
+interface SwotData {
+  strengths?: string[];
+  weaknesses?: string[];
+  opportunities?: string[];
+  threats?: string[];
 }
 
 interface Competitor {
   name: string;
   rating?: number;
   price_model?: string;
-  top_strength?: string;
-  top_weakness?: string;
+  strengths?: string[];
+  weaknesses?: string[];
 }
 
 interface Report {
@@ -32,13 +29,8 @@ interface Report {
   period: string;
   executive_summary: string;
   review_themes?: Theme[];
-  swot?: {
-    strengths?: SwotItem[];
-    weaknesses?: SwotItem[];
-    opportunities?: SwotItem[];
-    threats?: SwotItem[];
-  };
-  recommendations?: Recommendation[];
+  swot?: SwotData;
+  recommendations?: string[];
   competitors?: Competitor[];
 }
 
@@ -46,12 +38,6 @@ const SENTIMENT_COLOR: Record<string, string> = {
   positive: "bg-green-100 text-green-800",
   negative: "bg-red-100 text-red-800",
   mixed: "bg-yellow-100 text-yellow-800",
-};
-
-const PRIORITY_COLOR: Record<string, string> = {
-  high: "bg-red-50 border-red-300",
-  medium: "bg-yellow-50 border-yellow-300",
-  low: "bg-gray-50 border-gray-200",
 };
 
 export function ReportView({ report }: { report: Report }) {
@@ -76,10 +62,10 @@ export function ReportView({ report }: { report: Report }) {
                     {t.sentiment}
                   </span>
                 </div>
-                <p className="text-xs text-gray-500">Mentions: {t.count}</p>
-                {t.sample_quote && (
+                <p className="text-xs text-gray-500">Mentions: {t.review_count}</p>
+                {t.examples && t.examples.length > 0 && (
                   <blockquote className="mt-2 border-l-2 border-gray-200 pl-3 text-sm italic text-gray-600">
-                    "{t.sample_quote}"
+                    "{t.examples[0]}"
                   </blockquote>
                 )}
               </div>
@@ -88,7 +74,9 @@ export function ReportView({ report }: { report: Report }) {
         </section>
       )}
 
-      {Object.values(swot).some((arr) => arr && arr.length > 0) && (
+      {(["strengths", "weaknesses", "opportunities", "threats"] as const).some(
+        (k) => swot[k] && (swot[k] as string[]).length > 0,
+      ) && (
         <section>
           <h2 className="text-xl font-semibold mb-3">SWOT Analysis</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -97,7 +85,7 @@ export function ReportView({ report }: { report: Report }) {
                 <h3 className="font-semibold capitalize mb-2">{key}</h3>
                 <ul className="list-disc list-inside space-y-1">
                   {(swot[key] ?? []).map((item, i) => (
-                    <li key={i} className="text-sm text-gray-700">{item.point}</li>
+                    <li key={i} className="text-sm text-gray-700">{item}</li>
                   ))}
                 </ul>
               </div>
@@ -118,17 +106,13 @@ export function ReportView({ report }: { report: Report }) {
       {report.recommendations && report.recommendations.length > 0 && (
         <section>
           <h2 className="text-xl font-semibold mb-3">Recommendations</h2>
-          <div className="space-y-3">
+          <ol className="space-y-2 list-decimal list-inside">
             {report.recommendations.map((rec, i) => (
-              <div key={i} className={`rounded-xl border p-4 ${PRIORITY_COLOR[rec.priority] ?? "bg-white"}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium">{rec.action}</p>
-                  <span className="text-xs font-semibold uppercase text-gray-500 shrink-0">{rec.priority}</span>
-                </div>
-                <p className="text-sm text-gray-600 mt-1">{rec.rationale}</p>
-              </div>
+              <li key={i} className="rounded-xl border bg-white p-4 shadow-sm text-sm text-gray-700 leading-relaxed">
+                {rec}
+              </li>
             ))}
-          </div>
+          </ol>
         </section>
       )}
     </div>

@@ -4,8 +4,8 @@ interface Competitor {
   name: string;
   rating?: number;
   price_model?: string;
-  top_strength?: string;
-  top_weakness?: string;
+  strengths?: string[];
+  weaknesses?: string[];
 }
 
 interface Props {
@@ -39,8 +39,8 @@ export function CompetitorMatrix({ competitors }: Props) {
                 ) : "—"}
               </td>
               <td className="px-4 py-2">{c.price_model ?? "—"}</td>
-              <td className="px-4 py-2 text-green-700">{c.top_strength ?? "—"}</td>
-              <td className="px-4 py-2 text-red-600">{c.top_weakness ?? "—"}</td>
+              <td className="px-4 py-2 text-green-700">{c.strengths?.[0] ?? "—"}</td>
+              <td className="px-4 py-2 text-red-600">{c.weaknesses?.[0] ?? "—"}</td>
             </tr>
           ))}
         </tbody>
