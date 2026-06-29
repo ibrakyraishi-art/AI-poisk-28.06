@@ -54,17 +54,59 @@
 
 ---
 
-## Следующий шаг — Stage 2: Reviews Agent
+## 2026-06-29 — Stage 2: Reviews Agent (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`**
+Pydantic-схемы для всех агентов: `ReviewTheme`, `ReviewData`, `AnalystOutput`,
+`CompetitorProfile`, `ReportData`. `confidence` в ReviewData/AnalystOutput управляет
+ConditionalTask retry-логикой в Stage 4.
+
+**`tools/memory_save_tool.py` / `tools/memory_search_tool.py`**
+CrewAI-инструменты (`BaseTool`) над `vector_store.save()` и `vector_store.search()`.
+`run_id` / `user_id` хранятся как Pydantic-поля инструмента — изолируют каждый запуск.
+`MemorySearchTool` возвращает результаты с меткой агента и score — LLM видит контекст.
+
+**`agents/reviews_agent.py`**
+- `FetchAndSaveReviewsTool`: один вызов от LLM → весь пайплайн (скрейп → батч по 50 →
+  saturation check → save_batch). LLM не управляет циклом, только вызывает инструмент.
+- Фолбэк: любое исключение скрейпера → загружается `tests/fixtures/app_store_reviews.json`
+  (50 реалистичных отзывов: батарея, краши, цена, GPS, UI).
+- `create_reviews_agent()` / `create_reviews_task()` — фабрики для Stage 4 (Manager).
+- `output_pydantic=ReviewData` — CrewAI требует JSON по схеме, retry если не совпадает.
+
+**`main.py`**
+- CLI: `python main.py --company FitTrack --period 30d [--model sonnet]`
+- Создаёт `analysis_runs` запись (status=running), обновляет на completed/failed.
+- Работает без Supabase (локальный run_id fallback).
+- Предупреждение о стоимости перед Opus.
+- Красивый вывод в консоль: темы с тональностью и цитатами.
+
+**`tests/fixtures/app_store_reviews.json`**
+50 реалистичных отзывов fitness-приложения. Темы: battery, crashes, price/subscription,
+GPS accuracy, sync bugs, UI/UX, customer support, features.
+
+### Открытые слабые места (Stage 2)
+
+| # | Проблема | Приоритет | Когда чинить |
+|---|---------|-----------|-------------|
+| 1 | `is_saturated()` делает N запросов к Supabase | Medium | До Stage 4 |
+| 2 | Скрейперы не протестированы с реальными app_id | Medium | Перед первым реальным запуском |
+| 3 | `result.pydantic` может быть None при LLM-сбое | Low | Добавить retry в main.py |
+| 4 | Нет `requirements.txt` | High | Перед первым запуском |
+
+---
+
+## Следующий шаг — Stage 3: News Agent + Analyst + Report Writer
 
 По `TODOS.md`:
-- `agents/reviews_agent.py` — CrewAI агент с `output_pydantic=ReviewData`,
-  стоп по насыщению (`is_saturated()`), `MAX_REVIEWS=200`
-- `models/schemas.py` — Pydantic-схема `ReviewData`
-- `tools/memory_save_tool.py` — CrewAI-инструмент обёртка над `save_batch()`
-- `tools/memory_search_tool.py` — CrewAI-инструмент обёртка над `search()`
-- `main.py` — точка входа; создаёт запись в `analysis_runs`, запускает crew
-- Скрейпер: `google-play-scraper` / `app-store-scraper` + мок-фикстуры в `tests/fixtures/`
+- `agents/news_agent.py` — News API интеграция
+- `models/schemas.py` — добавить `NewsData` (уже есть файл, дополнить)
+- `tasks/research_tasks.py` — sequential pipeline: Reviews → News → Analyst → Report
+- `agents/analyst_agent.py` — читает из pgvector, пишет AnalystOutput (SWOT)
+- `agents/report_writer_agent.py` — генерирует JSON + report.docx
+- Загрузка docx в Supabase Storage, запись `report_docx_path` в `analysis_runs`
 
-**Цель Этапа 1 (из дизайн-документа):**
-`python main.py` запускает Reviews Agent против реального приложения (FitTrack или любого),
-выводит сгруппированный список тем с тональностью, данные в Supabase.
+**Перед Stage 3**: добавить `requirements.txt` с зафиксированными версиями
+(особенно `crewai==x.y.z` — ConditionalTask API нестабилен).
