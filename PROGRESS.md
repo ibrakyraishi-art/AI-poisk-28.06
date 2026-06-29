@@ -98,15 +98,73 @@ GPS accuracy, sync bugs, UI/UX, customer support, features.
 
 ---
 
-## Следующий шаг — Stage 3: News Agent + Analyst + Report Writer
+---
+
+## 2026-06-29 — Stage 3: полный 4-агентный pipeline (ЗАВЕРШЁН)
+
+### Что сделано
+
+**`models/schemas.py`** — добавлен `NewsData` (company, period, article_count,
+key_developments, sentiment_summary, confidence, articles_saved_to_memory).
+
+**`agents/news_agent.py`**
+- `NewsSearchTool`: запросы к newsapi-python (4 поисковые фразы по шаблону).
+  Фолбэк: 10 mock-статей, если `NEWS_API_KEY` не задан или API упал.
+  Агент сам решает, какие статьи релевантны, и вызывает `memory_save` —
+  не сохраняем всё подряд автоматически.
+- Дефолтная модель: `gemini-flash` (задача простая — найди и сохрани).
+
+**`agents/analyst_agent.py`**
+- Только `MemorySearchTool` — без внешних запросов.
+  Читает из pgvector то, что Reviews + News агенты уже туда положили.
+- 6 поисковых запросов покрывают все квадранты SWOT.
+- Также получает структурированный JSON предыдущих агентов через `context=`.
+- Дефолтная модель: `sonnet` (синтез сложнее сбора данных).
+- `max_iter=10` — больше итераций для 6 поисковых запросов.
+
+**`agents/report_writer_agent.py`**
+- `GenerateReportTool`: принимает полный ReportData JSON → создаёт .docx
+  (python-docx) → загружает в Supabase Storage `reports/{run_id}/report.docx`.
+  Фолбэк: сохраняет в `output/` локально если Storage недоступен.
+- `output_pydantic=ReportData` — структурированный JSON и docx генерируются
+  одновременно.
+- `max_iter=6` — меньше итераций (данные уже готовы, задача — написать и сохранить).
+
+**`tasks/research_tasks.py`** — полностью рефакторен:
+все 4 функции `make_*_task()` делегируют в соответствующие agent-модули.
+Нет дублирования Task-определений.
+
+**`main.py`** — обновлён для полного 4-агентного запуска:
+- Создаёт 4 агента + 4 задачи с правильной цепочкой `context=`.
+- `--model` переопределяет модель у всех агентов одновременно.
+- `_finish_run()` теперь сохраняет `report_docx_path` в `analysis_runs`.
+- `_print_results()` выводит executive summary, SWOT, инсайты, рекомендации.
+
+### Архитектура pipeline (Stage 3)
+
+```
+Reviews Agent  →  pgvector (embeddings)
+                      ↓
+News Agent     →  pgvector (embeddings)
+                      ↓
+Analyst Agent  ←  pgvector search + context JSON
+                      ↓
+Report Writer  ←  context JSON → .docx → Supabase Storage
+                      ↓
+              analysis_runs.report_json / report_docx_path
+```
+
+### Что нужно перед первым запуском Stage 3
+
+1. Создать бакет "reports" в Supabase Storage (Dashboard → Storage → New bucket).
+2. Задать переменные в `.env`: `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+   `ANTHROPIC_API_KEY` (или `GOOGLE_API_KEY`), опционально `NEWS_API_KEY`.
+3. `pip install -r requirements.txt`
+
+### Следующий шаг — Stage 4: Manager + ConditionalTask
 
 По `TODOS.md`:
-- `agents/news_agent.py` — News API интеграция
-- `models/schemas.py` — добавить `NewsData` (уже есть файл, дополнить)
-- `tasks/research_tasks.py` — sequential pipeline: Reviews → News → Analyst → Report
-- `agents/analyst_agent.py` — читает из pgvector, пишет AnalystOutput (SWOT)
-- `agents/report_writer_agent.py` — генерирует JSON + report.docx
-- Загрузка docx в Supabase Storage, запись `report_docx_path` в `analysis_runs`
-
-**Перед Stage 3**: добавить `requirements.txt` с зафиксированными версиями
-(особенно `crewai==x.y.z` — ConditionalTask API нестабилен).
+- Зафиксировать точную версию `crewai` (`pip freeze | grep crewai`).
+- `agents/manager_agent.py` — Manager с `Process.hierarchical`.
+- `ConditionalTask` для Reviews: если `confidence < 0.7` → повторить с `90d`.
+- Переключить `main.py` на `Process.hierarchical`.
