@@ -71,7 +71,22 @@ class AnalystOutput(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Competitor Finder output
+# Business Context Agent output (Stage 5)
+# ---------------------------------------------------------------------------
+
+class BusinessContextData(BaseModel):
+    """Рыночный контекст целевой компании: категория, аудитория, позиционирование."""
+    company: str
+    category: str              # "fitness tracking", "project management", etc.
+    target_audience: str       # кто основные пользователи
+    key_differentiators: list[str]   # чем выделяется среди конкурентов
+    main_competitors: list[str]      # имена конкурентов — передаются Competitor Finder
+    market_context: str        # краткий абзац о рынке и трендах
+    confidence: float = Field(ge=0.0, le=1.0)
+
+
+# ---------------------------------------------------------------------------
+# Competitor Finder output (Stage 5)
 # ---------------------------------------------------------------------------
 
 class CompetitorProfile(BaseModel):
@@ -85,6 +100,13 @@ class CompetitorProfile(BaseModel):
     strengths: list[str] = Field(default_factory=list)
     weaknesses: list[str] = Field(default_factory=list)
     source_urls: list[str] = Field(default_factory=list)
+
+
+class CompetitorFinderOutput(BaseModel):
+    """Полный вывод Competitor Finder: матрица конкурентов."""
+    company: str
+    competitors: list[CompetitorProfile]  # ≥ COMPETITOR_MIN_COUNT=2
+    confidence: float = Field(ge=0.0, le=1.0)
 
 
 # ---------------------------------------------------------------------------
