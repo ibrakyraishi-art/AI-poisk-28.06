@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from crewai import Task
 
-from models.schemas import AnalystOutput, ReportData
+from models.schemas import ReportData
 
 
 def make_reviews_task(agent, *, app_name: str, period: str) -> Task:
@@ -29,26 +29,8 @@ def make_news_task(agent, *, company: str, period: str) -> Task:
 
 def make_analyst_task(agent, *, company: str, period: str, context_tasks: list[Task]) -> Task:
     """Stage 3: SWOT-анализ на основе данных из RAG-памяти."""
-    return Task(
-        description=(
-            f"Perform a strategic SWOT analysis for '{company}' based on "
-            f"collected reviews and news from the past {period}.\n\n"
-            "Steps:\n"
-            "1. Search memory for key themes: use memory_search with queries like "
-            "'user complaints', 'positive feedback', 'product updates', "
-            "'competitive threats', 'market opportunity'.\n"
-            "2. Synthesize findings into Strengths, Weaknesses, Opportunities, Threats.\n"
-            "3. Extract 3-5 key_insights — actionable statements for the product team.\n"
-            "4. Set confidence based on data richness (>50 data points = 0.9, else scale down)."
-        ),
-        expected_output=(
-            "A valid AnalystOutput JSON with: company, period, strengths, weaknesses, "
-            "opportunities, threats, key_insights, confidence."
-        ),
-        agent=agent,
-        output_pydantic=AnalystOutput,
-        context=context_tasks,   # видит вывод Reviews и News задач
-    )
+    from agents.analyst_agent import create_analyst_task
+    return create_analyst_task(agent, company=company, period=period, context_tasks=context_tasks)
 
 
 def make_report_task(agent, *, company: str, period: str, context_tasks: list[Task]) -> Task:
