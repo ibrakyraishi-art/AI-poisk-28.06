@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from crewai import Task
 
-from models.schemas import AnalystOutput, NewsData, ReportData, ReviewData
+from models.schemas import AnalystOutput, ReportData
 
 
 def make_reviews_task(agent, *, app_name: str, period: str) -> Task:
@@ -23,28 +23,8 @@ def make_reviews_task(agent, *, app_name: str, period: str) -> Task:
 
 def make_news_task(agent, *, company: str, period: str) -> Task:
     """Stage 3: собрать новости и упомянания в прессе."""
-    return Task(
-        description=(
-            f"Find recent news articles and press mentions about '{company}' "
-            f"from the past {period}.\n\n"
-            "Steps:\n"
-            "1. Search for news using the news_search tool with these queries: "
-            f"'{company} app update', '{company} review', '{company} funding', "
-            f"'{company} competitor'.\n"
-            "2. Save each relevant article summary to memory using memory_save "
-            "with the source URL appended: 'summary | url: <url>'.\n"
-            "3. Identify: product updates, user complaints mentioned in press, "
-            "funding or company news, competitive moves.\n"
-            "4. Set confidence: 0.9 if >10 articles found, 0.6 if 5-10, 0.4 if <5."
-        ),
-        expected_output=(
-            "A valid NewsData JSON with: company, period, article_count, "
-            "key_developments (list of strings), sentiment_summary (string), "
-            "confidence (float 0-1), articles_saved_to_memory (int)."
-        ),
-        agent=agent,
-        output_pydantic=NewsData,
-    )
+    from agents.news_agent import create_news_task
+    return create_news_task(agent, company=company, period=period)
 
 
 def make_analyst_task(agent, *, company: str, period: str, context_tasks: list[Task]) -> Task:
