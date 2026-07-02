@@ -20,8 +20,14 @@ export default function SettingsPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push("/auth");
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!data.session) { router.push("/auth"); return; }
+      const { data: row } = await supabase
+        .from("user_api_keys")
+        .select("keys")
+        .eq("user_id", data.session.user.id)
+        .maybeSingle();
+      if (row?.keys) setValues(row.keys as Record<string, string>);
     });
   }, [router]);
 

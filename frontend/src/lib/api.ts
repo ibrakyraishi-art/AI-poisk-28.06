@@ -26,7 +26,7 @@ export interface AnalysisRun {
   report_docx_path: string | null;
   error: string | null;
   created_at: string;
-  updated_at: string;
+  completed_at: string | null;
 }
 
 export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: string }> {
