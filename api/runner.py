@@ -20,6 +20,28 @@ from supabase import create_client
 
 _executor = ThreadPoolExecutor(max_workers=4)
 
+# BYOK: maps user_api_keys.keys field names → LiteLLM env var names
+_BYOK_KEY_MAP = {
+    "anthropic_api_key": "ANTHROPIC_API_KEY",
+    "google_api_key": "GEMINI_API_KEY",
+    "serper_api_key": "SERPER_API_KEY",
+    "news_api_key": "NEWS_API_KEY",
+}
+
+
+def _load_user_keys(user_id: str) -> dict[str, str]:
+    """Fetch user's BYOK keys from user_api_keys table and return as env-var dict."""
+    client = _supabase()
+    result = client.table("user_api_keys").select("keys").eq("user_id", user_id).execute()
+    if not result.data:
+        return {}
+    stored: dict = result.data[0].get("keys") or {}
+    return {
+        env_var: stored[byok_key]
+        for byok_key, env_var in _BYOK_KEY_MAP.items()
+        if stored.get(byok_key)
+    }
+
 
 def _supabase():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
@@ -60,6 +82,13 @@ def _run_crew(
     model: str | None,
 ) -> None:
     """Blocking crew execution — runs in a thread pool worker."""
+    # BYOK: inject user's API keys into os.environ for this run
+    user_keys = _load_user_keys(user_id)
+    _prev_env: dict[str, str | None] = {}
+    for env_var, value in user_keys.items():
+        _prev_env[env_var] = os.environ.get(env_var)
+        os.environ[env_var] = value
+
     from crewai import ConditionalTask, Crew, Process
 
     from agents.analyst_agent import create_analyst_agent, create_analyst_task
@@ -139,3 +168,10 @@ def _run_crew(
             "status": "failed",
             "error": traceback.format_exc()[-2000:],
         }).eq("id", run_id).execute()
+    finally:
+        # Restore env vars that were set for this user's BYOK keys
+        for env_var, original in _prev_env.items():
+            if original is None:
+                os.environ.pop(env_var, None)
+            else:
+                os.environ[env_var] = original
