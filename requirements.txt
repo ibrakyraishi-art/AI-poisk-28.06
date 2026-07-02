@@ -24,5 +24,4 @@ python-docx>=1.1.0
 newsapi-python>=0.2.7
 
 # ── Web search — SerperDev (Stage 5) ─────────────────────────────────────────
-# SerperDev uses direct HTTP via requests — no extra package needed
-requests>=2.31.0
+# requests comes in as transitive dep — no explicit pin needed
