@@ -21,7 +21,10 @@ export default function AuthPage() {
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl border bg-white p-8 shadow-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">CompetitorScope</h1>
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold">CompetitorScope</h1>
+          <p className="text-sm text-gray-500 mt-1">Competitive analysis, automated.</p>
+        </div>
         <Auth
           supabaseClient={supabase}
           appearance={{ theme: ThemeSupa }}

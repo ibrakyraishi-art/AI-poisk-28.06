@@ -1,39 +1,37 @@
 import Link from "next/link";
 
+const FEATURES = [
+  { icon: "★", title: "Review Themes", desc: "App Store & Google Play — clustered by topic, scored by sentiment." },
+  { icon: "◎", title: "News Intelligence", desc: "Recent press, product launches, market moves — last 30–180 days." },
+  { icon: "⟁", title: "Competitor Profiles", desc: "Ratings, pricing, key strengths and gaps of top rivals, side by side." },
+];
+
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 px-4 text-center">
-      <div className="max-w-2xl space-y-4">
-        <h1 className="text-5xl font-bold tracking-tight">CompetitorScope</h1>
-        <p className="text-xl text-gray-600">
-          AI-powered competitive analysis: reviews, news, market context — delivered in minutes.
+    <main className="flex min-h-screen flex-col items-center justify-center gap-10 px-4 text-center">
+      <div className="max-w-xl space-y-3">
+        <p className="text-xs font-semibold tracking-widest text-indigo-500 uppercase">CompetitorScope</p>
+        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+          Know your market<br />before your next sprint.
+        </h1>
+        <p className="text-lg text-gray-500">
+          7-agent AI pipeline — reviews, news, competitors — in one report.
         </p>
       </div>
 
-      <div className="flex gap-4">
-        <Link
-          href="/auth"
-          className="rounded-lg bg-indigo-600 px-6 py-3 text-white font-semibold hover:bg-indigo-700 transition-colors"
-        >
-          Get started
-        </Link>
-        <Link
-          href="/dashboard"
-          className="rounded-lg border border-gray-300 px-6 py-3 font-semibold hover:bg-gray-100 transition-colors"
-        >
-          Dashboard
-        </Link>
-      </div>
+      <Link
+        href="/auth"
+        className="rounded-lg bg-indigo-600 px-7 py-3 text-white font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition-colors shadow-sm"
+      >
+        Get started free →
+      </Link>
 
-      <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-3xl">
-        {[
-          { title: "Reviews Analysis", desc: "App Store & Google Play sentiment, themes, and trends." },
-          { title: "News Intelligence", desc: "Recent press coverage, product launches, and market moves." },
-          { title: "Competitor Profiles", desc: "Ratings, pricing, strengths and gaps of top rivals." },
-        ].map((f) => (
-          <div key={f.title} className="rounded-xl border bg-white p-6 shadow-sm text-left">
-            <h3 className="font-semibold text-lg mb-1">{f.title}</h3>
-            <p className="text-sm text-gray-500">{f.desc}</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 max-w-2xl w-full">
+        {FEATURES.map((f) => (
+          <div key={f.title} className="rounded-xl border bg-white px-5 py-4 text-left">
+            <span className="text-indigo-500 text-lg">{f.icon}</span>
+            <h3 className="mt-1 font-semibold text-sm">{f.title}</h3>
+            <p className="mt-0.5 text-xs text-gray-500 leading-relaxed">{f.desc}</p>
           </div>
         ))}
       </div>

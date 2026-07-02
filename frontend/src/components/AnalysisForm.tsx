@@ -109,8 +109,11 @@ export function AnalysisForm({ onStarted }: Props) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-indigo-600 py-2.5 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+          className="w-full rounded-lg bg-indigo-600 py-2.5 text-white font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
         >
+          {loading && (
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          )}
           {loading ? "Starting…" : "Run analysis"}
         </button>
       </form>

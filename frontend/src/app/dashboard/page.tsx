@@ -45,10 +45,10 @@ export default function DashboardPage() {
     router.push("/auth");
   }
 
-  const STATUS_COLORS: Record<string, string> = {
-    running: "bg-blue-100 text-blue-700",
-    completed: "bg-green-100 text-green-700",
-    failed: "bg-red-100 text-red-700",
+  const STATUS_CONFIG: Record<string, { color: string; label: string; icon: string }> = {
+    running:   { color: "bg-blue-100 text-blue-700",   label: "Running",   icon: "⟳" },
+    completed: { color: "bg-green-100 text-green-700", label: "Done",      icon: "✓" },
+    failed:    { color: "bg-red-100 text-red-700",     label: "Failed",    icon: "✕" },
   };
 
   return (
@@ -68,25 +68,31 @@ export default function DashboardPage() {
         {loading ? (
           <p className="text-sm text-gray-500">Loading…</p>
         ) : runs.length === 0 ? (
-          <p className="text-sm text-gray-500">No analyses yet. Run your first one above.</p>
+          <div className="rounded-xl border border-dashed bg-white px-6 py-10 text-center">
+            <p className="text-sm font-medium text-gray-700">No analyses yet</p>
+            <p className="text-xs text-gray-400 mt-1">Enter an app name above and hit Run analysis.</p>
+          </div>
         ) : (
           <ul className="space-y-2">
-            {runs.map((r) => (
-              <li key={r.id}>
-                <Link
-                  href={`/results/${r.id}`}
-                  className="flex items-center justify-between rounded-xl border bg-white px-4 py-3 shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <div>
-                    <p className="font-medium">{r.company}</p>
-                    <p className="text-xs text-gray-400">{r.period} · {new Date(r.created_at).toLocaleDateString()}</p>
-                  </div>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[r.status] ?? "bg-gray-100"}`}>
-                    {r.status}
-                  </span>
-                </Link>
-              </li>
-            ))}
+            {runs.map((r) => {
+              const s = STATUS_CONFIG[r.status] ?? { color: "bg-gray-100 text-gray-600", label: r.status, icon: "·" };
+              return (
+                <li key={r.id}>
+                  <Link
+                    href={`/results/${r.id}`}
+                    className="flex items-center justify-between rounded-xl border bg-white px-4 py-3 shadow-sm hover:shadow-md transition-shadow"
+                  >
+                    <div>
+                      <p className="font-medium">{r.company}</p>
+                      <p className="text-xs text-gray-400">{r.period} · {new Date(r.created_at).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${s.color}`}>
+                      <span>{s.icon}</span>{s.label}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

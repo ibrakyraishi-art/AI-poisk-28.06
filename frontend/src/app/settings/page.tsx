@@ -52,7 +52,7 @@ export default function SettingsPage() {
     <main className="max-w-lg mx-auto mt-16 px-4">
       <h1 className="text-2xl font-bold mb-2">API Keys (BYOK)</h1>
       <p className="text-sm text-gray-500 mb-8">
-        Keys are stored encrypted in your private Supabase row — never shared.
+        Keys are stored in your private Supabase row, protected by Row-Level Security — only your account can read them.
       </p>
 
       <form onSubmit={handleSave} className="space-y-5">
