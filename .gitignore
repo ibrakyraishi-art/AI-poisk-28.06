@@ -5,3 +5,4 @@ __pycache__/
 output/
 chroma_db/
 .gstack/
+frontend/node_modules/
