@@ -20,10 +20,11 @@ export default function AuthPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl border bg-white p-8 shadow-md">
+      <div className="w-full max-w-sm rounded-2xl border border-white/10 bg-white/[0.04] p-8 shadow-[0_8px_40px_rgba(0,0,0,0.45)] backdrop-blur-md">
         <div className="mb-6 text-center">
-          <h1 className="text-2xl font-bold">CompetitorScope</h1>
-          <p className="text-sm text-gray-500 mt-1">Анализ конкурентов на автопилоте.</p>
+          <div className="mb-2 text-3xl">🔭</div>
+          <h1 className="text-2xl font-bold text-white">CompetitorScope</h1>
+          <p className="mt-1 text-sm text-slate-400">Анализ конкурентов на автопилоте.</p>
         </div>
         <Auth
           supabaseClient={supabase}
@@ -32,9 +33,25 @@ export default function AuthPage() {
             variables: {
               default: {
                 colors: {
-                  brand: "#4f46e5",
-                  brandAccent: "#4338ca",
+                  brand: "#6366f1",
+                  brandAccent: "#818cf8",
                   brandButtonText: "#ffffff",
+                  defaultButtonBackground: "rgba(255,255,255,0.05)",
+                  defaultButtonBackgroundHover: "rgba(255,255,255,0.1)",
+                  defaultButtonBorder: "rgba(255,255,255,0.12)",
+                  defaultButtonText: "#e2e8f0",
+                  inputBackground: "rgba(255,255,255,0.04)",
+                  inputBorder: "rgba(255,255,255,0.12)",
+                  inputBorderHover: "rgba(255,255,255,0.22)",
+                  inputBorderFocus: "#6366f1",
+                  inputText: "#f1f5f9",
+                  inputLabelText: "#94a3b8",
+                  inputPlaceholder: "#64748b",
+                  messageText: "#94a3b8",
+                  messageTextDanger: "#f87171",
+                  anchorTextColor: "#94a3b8",
+                  anchorTextHoverColor: "#e2e8f0",
+                  dividerBackground: "rgba(255,255,255,0.1)",
                 },
                 radii: {
                   borderRadiusButton: "0.5rem",

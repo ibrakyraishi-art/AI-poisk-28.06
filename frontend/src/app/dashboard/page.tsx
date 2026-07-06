@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { AppHeader } from "@/components/AppHeader";
 import { AnalysisForm } from "@/components/AnalysisForm";
 import { AnalysisRun } from "@/lib/api";
 
@@ -40,62 +41,57 @@ export default function DashboardPage() {
     router.push(`/results/${runId}`);
   }
 
-  async function signOut() {
-    await supabase.auth.signOut();
-    router.push("/auth");
-  }
-
   const STATUS_CONFIG: Record<string, { color: string; label: string; icon: string }> = {
-    running:   { color: "bg-blue-100 text-blue-700",   label: "Идёт",   icon: "⟳" },
-    completed: { color: "bg-green-100 text-green-700", label: "Готово", icon: "✓" },
-    failed:    { color: "bg-red-100 text-red-700",     label: "Ошибка", icon: "✕" },
+    running:   { color: "bg-blue-500/15 text-blue-300 ring-1 ring-blue-500/25",   label: "Идёт",   icon: "⟳" },
+    completed: { color: "bg-green-500/15 text-green-300 ring-1 ring-green-500/25", label: "Готово", icon: "✓" },
+    failed:    { color: "bg-red-500/15 text-red-300 ring-1 ring-red-500/25",       label: "Ошибка", icon: "✕" },
   };
 
   return (
-    <main className="max-w-3xl mx-auto px-4 py-12 space-y-10">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Кабинет</h1>
-        <div className="flex gap-3">
-          <Link href="/settings" className="text-sm text-gray-500 hover:text-gray-800">API-ключи</Link>
-          <button onClick={signOut} className="text-sm text-gray-500 hover:text-gray-800">Выйти</button>
+    <>
+      <AppHeader />
+      <main className="max-w-3xl mx-auto px-4 py-10 space-y-10">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Кабинет</h1>
+          <p className="text-sm text-slate-400 mt-1">Запустите анализ и следите за работой агентов.</p>
         </div>
-      </div>
 
-      <AnalysisForm onStarted={handleStarted} />
+        <AnalysisForm onStarted={handleStarted} />
 
-      <section>
-        <h2 className="text-lg font-semibold mb-3">Прошлые анализы</h2>
-        {loading ? (
-          <p className="text-sm text-gray-500">Загрузка…</p>
-        ) : runs.length === 0 ? (
-          <div className="rounded-xl border border-dashed bg-white px-6 py-10 text-center">
-            <p className="text-sm font-medium text-gray-700">Пока нет анализов</p>
-            <p className="text-xs text-gray-400 mt-1">Введите название приложения выше и нажмите «Запустить анализ».</p>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {runs.map((r) => {
-              const s = STATUS_CONFIG[r.status] ?? { color: "bg-gray-100 text-gray-600", label: r.status, icon: "·" };
-              return (
-                <li key={r.id}>
-                  <Link
-                    href={`/results/${r.id}`}
-                    className="flex items-center justify-between rounded-xl border bg-white px-4 py-3 shadow-sm hover:shadow-md transition-shadow"
-                  >
-                    <div>
-                      <p className="font-medium">{r.company}</p>
-                      <p className="text-xs text-gray-400">{r.period} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</p>
-                    </div>
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${s.color}`}>
-                      <span>{s.icon}</span>{s.label}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </main>
+        <section>
+          <h2 className="text-lg font-semibold mb-3 text-white">Прошлые анализы</h2>
+          {loading ? (
+            <p className="text-sm text-slate-400">Загрузка…</p>
+          ) : runs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
+              <p className="text-sm font-medium text-slate-200">Пока нет анализов</p>
+              <p className="text-xs text-slate-500 mt-1">Введите название приложения выше и нажмите «Запустить анализ».</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {runs.map((r) => {
+                const s = STATUS_CONFIG[r.status] ?? { color: "bg-white/10 text-slate-300", label: r.status, icon: "·" };
+                return (
+                  <li key={r.id}>
+                    <Link
+                      href={`/results/${r.id}`}
+                      className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3 transition-all hover:border-white/20 hover:bg-white/[0.06]"
+                    >
+                      <div>
+                        <p className="font-medium text-white">{r.company}</p>
+                        <p className="text-xs text-slate-500">{r.period} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</p>
+                      </div>
+                      <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${s.color}`}>
+                        <span>{s.icon}</span>{s.label}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      </main>
+    </>
   );
 }

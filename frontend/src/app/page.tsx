@@ -33,34 +33,56 @@ const FEATURES = [
 export default function HomePage() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-10 px-4 py-16 text-center">
-      <div className="max-w-xl space-y-4">
-        <p className="text-xs font-semibold tracking-widest text-indigo-500 uppercase">CompetitorScope</p>
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
-          Знай свой рынок<br />до следующего спринта.
+      <div className="max-w-2xl space-y-5">
+        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-indigo-300 backdrop-blur">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-indigo-400" />
+          </span>
+          Конвейер из 7 AI-агентов
+        </span>
+
+        <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+          <span className="bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
+            Знай свой рынок
+          </span>
+          <br />
+          <span className="animate-shimmer bg-gradient-to-r from-indigo-400 via-violet-400 to-fuchsia-400 bg-clip-text text-transparent">
+            до следующего спринта.
+          </span>
         </h1>
-        <p className="text-lg text-gray-500">
-          Конвейер из 7 AI-агентов — отзывы, новости, конкуренты — в одном отчёте.
+
+        <p className="mx-auto max-w-lg text-lg text-slate-400">
+          Отзывы, новости и конкуренты — семь агентов собирают их в один отчёт, пока вы наблюдаете за их работой вживую.
         </p>
       </div>
 
       <Link
         href="/auth"
-        className="rounded-lg bg-indigo-600 px-7 py-3 text-white font-semibold hover:bg-indigo-700 active:bg-indigo-800 transition-colors shadow-sm"
+        className="group rounded-lg bg-indigo-500 px-7 py-3 font-semibold text-white shadow-lg shadow-indigo-500/30 transition-all hover:bg-indigo-400 hover:shadow-indigo-400/40 active:scale-[0.98]"
       >
-        Начать бесплатно →
+        Начать бесплатно
+        <span className="ml-1 inline-block transition-transform group-hover:translate-x-0.5">→</span>
       </Link>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 max-w-3xl w-full">
+      <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-3">
         {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-xl border bg-white px-5 py-5 text-left shadow-sm">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+          <div
+            key={f.title}
+            className="rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-5 text-left backdrop-blur-sm transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+          >
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-500/20">
               {f.icon}
             </div>
-            <h3 className="mt-3 font-semibold text-sm">{f.title}</h3>
-            <p className="mt-1 text-xs text-gray-500 leading-relaxed">{f.desc}</p>
+            <h3 className="mt-3 text-sm font-semibold text-white">{f.title}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-400">{f.desc}</p>
           </div>
         ))}
       </div>
+
+      <footer className="pt-6 text-xs text-slate-600">
+        © 2026 CompetitorScope · AI-анализ конкурентов
+      </footer>
     </main>
   );
 }
