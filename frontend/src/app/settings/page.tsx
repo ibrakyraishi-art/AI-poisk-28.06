@@ -7,10 +7,10 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 const KEY_FIELDS = [
-  { id: "anthropic_api_key", label: "Anthropic API Key", placeholder: "sk-ant-..." },
-  { id: "google_api_key", label: "Google AI API Key", placeholder: "AIza..." },
-  { id: "serper_api_key", label: "Serper API Key (web search)", placeholder: "..." },
-  { id: "news_api_key", label: "NewsAPI Key (optional)", placeholder: "..." },
+  { id: "anthropic_api_key", label: "Ключ Anthropic API", placeholder: "sk-ant-..." },
+  { id: "google_api_key", label: "Ключ Google AI API", placeholder: "AIza..." },
+  { id: "serper_api_key", label: "Ключ Serper API (веб-поиск)", placeholder: "..." },
+  { id: "news_api_key", label: "Ключ NewsAPI (опционально)", placeholder: "..." },
 ];
 
 export default function SettingsPage() {
@@ -50,9 +50,9 @@ export default function SettingsPage() {
 
   return (
     <main className="max-w-lg mx-auto mt-16 px-4">
-      <h1 className="text-2xl font-bold mb-2">API Keys (BYOK)</h1>
+      <h1 className="text-2xl font-bold mb-2">API-ключи (свои ключи)</h1>
       <p className="text-sm text-gray-500 mb-8">
-        Keys are stored in your private Supabase row, protected by Row-Level Security — only your account can read them.
+        Ключи хранятся в вашей приватной строке Supabase под защитой Row-Level Security — читать их может только ваш аккаунт.
       </p>
 
       <form onSubmit={handleSave} className="space-y-5">
@@ -74,21 +74,21 @@ export default function SettingsPage() {
         ))}
 
         {error && <p className="text-red-600 text-sm">{error}</p>}
-        {saved && <p className="text-green-600 text-sm">Saved!</p>}
+        {saved && <p className="text-green-600 text-sm">Сохранено!</p>}
 
         <div className="flex gap-3">
           <button
             type="submit"
             className="rounded-lg bg-indigo-600 px-5 py-2 text-white font-semibold hover:bg-indigo-700 transition-colors"
           >
-            Save keys
+            Сохранить ключи
           </button>
           <button
             type="button"
             onClick={() => router.push("/dashboard")}
             className="rounded-lg border px-5 py-2 font-semibold hover:bg-gray-50 transition-colors"
           >
-            Dashboard
+            В кабинет
           </button>
         </div>
       </form>

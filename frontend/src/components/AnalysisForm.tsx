@@ -8,17 +8,17 @@ interface Props {
 }
 
 const PERIODS = [
-  { value: "30d", label: "Last 30 days" },
-  { value: "90d", label: "Last 90 days" },
-  { value: "6m", label: "Last 6 months" },
+  { value: "30d", label: "Последние 30 дней" },
+  { value: "90d", label: "Последние 90 дней" },
+  { value: "6m", label: "Последние 6 месяцев" },
 ];
 
 const MODELS = [
-  { value: "", label: "Default (Gemini Flash)" },
-  { value: "haiku", label: "Claude Haiku (fast)" },
-  { value: "sonnet", label: "Claude Sonnet (balanced)" },
-  { value: "opus", label: "Claude Opus (best, ~$2)" },
-  { value: "gemini-flash", label: "Gemini Flash (cheap)" },
+  { value: "", label: "По умолчанию (Gemini Flash)" },
+  { value: "haiku", label: "Claude Haiku (быстро)" },
+  { value: "sonnet", label: "Claude Sonnet (баланс)" },
+  { value: "opus", label: "Claude Opus (лучшее, ~$2)" },
+  { value: "gemini-flash", label: "Gemini Flash (дёшево)" },
 ];
 
 export function AnalysisForm({ onStarted }: Props) {
@@ -37,7 +37,7 @@ export function AnalysisForm({ onStarted }: Props) {
       const { run_id } = await startAnalysis({ company, period, platform, model: model || undefined });
       onStarted(run_id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Unknown error");
+      setError(e instanceof Error ? e.message : "Неизвестная ошибка");
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export function AnalysisForm({ onStarted }: Props) {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!company.trim()) return setError("Company name is required");
+    if (!company.trim()) return setError("Укажите название компании");
     if (model === "opus") {
       setShowCostWarning(true);
     } else {
@@ -56,13 +56,13 @@ export function AnalysisForm({ onStarted }: Props) {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold">New analysis</h2>
+        <h2 className="text-lg font-semibold">Новый анализ</h2>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Company / App name</label>
+          <label className="block text-sm font-medium mb-1">Компания / Приложение</label>
           <input
             className="w-full rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="e.g. Duolingo"
+            placeholder="напр. Duolingo"
             value={company}
             onChange={(e) => setCompany(e.target.value)}
           />
@@ -70,7 +70,7 @@ export function AnalysisForm({ onStarted }: Props) {
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Period</label>
+            <label className="block text-sm font-medium mb-1">Период</label>
             <select
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={period}
@@ -80,21 +80,21 @@ export function AnalysisForm({ onStarted }: Props) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Platform</label>
+            <label className="block text-sm font-medium mb-1">Платформа</label>
             <select
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={platform}
               onChange={(e) => setPlatform(e.target.value as AnalyzeRequest["platform"])}
             >
-              <option value="both">Both stores</option>
-              <option value="ios">App Store only</option>
-              <option value="android">Google Play only</option>
+              <option value="both">Обе платформы</option>
+              <option value="ios">Только App Store</option>
+              <option value="android">Только Google Play</option>
             </select>
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Model</label>
+          <label className="block text-sm font-medium mb-1">Модель</label>
           <select
             className="w-full rounded-lg border px-3 py-2 text-sm"
             value={model}
@@ -114,30 +114,30 @@ export function AnalysisForm({ onStarted }: Props) {
           {loading && (
             <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
           )}
-          {loading ? "Starting…" : "Run analysis"}
+          {loading ? "Запуск…" : "Запустить анализ"}
         </button>
       </form>
 
       {showCostWarning && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
           <div className="bg-white rounded-2xl p-8 max-w-sm shadow-xl space-y-4">
-            <h3 className="text-lg font-bold">Claude Opus cost warning</h3>
+            <h3 className="text-lg font-bold">Предупреждение о стоимости Claude Opus</h3>
             <p className="text-sm text-gray-600">
-              Running the full 7-agent pipeline with Claude Opus can cost <strong>~$2 per analysis</strong>.
-              Continue?
+              Полный конвейер из 7 агентов на Claude Opus может стоить <strong>~$2 за анализ</strong>.
+              Продолжить?
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => { setShowCostWarning(false); submit(); }}
                 className="flex-1 rounded-lg bg-indigo-600 py-2 text-white font-semibold hover:bg-indigo-700"
               >
-                Yes, continue
+                Да, продолжить
               </button>
               <button
                 onClick={() => setShowCostWarning(false)}
                 className="flex-1 rounded-lg border py-2 font-semibold hover:bg-gray-50"
               >
-                Cancel
+                Отмена
               </button>
             </div>
           </div>

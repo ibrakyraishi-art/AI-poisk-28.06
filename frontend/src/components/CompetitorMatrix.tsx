@@ -20,11 +20,11 @@ export function CompetitorMatrix({ competitors }: Props) {
       <table className="w-full text-sm border-collapse">
         <thead>
           <tr className="bg-gray-100 text-left">
-            <th className="px-4 py-2 font-semibold">Competitor</th>
-            <th className="px-4 py-2 font-semibold">Rating</th>
-            <th className="px-4 py-2 font-semibold">Pricing</th>
-            <th className="px-4 py-2 font-semibold">Top strength</th>
-            <th className="px-4 py-2 font-semibold">Top weakness</th>
+            <th className="px-4 py-2 font-semibold">Конкурент</th>
+            <th className="px-4 py-2 font-semibold">Рейтинг</th>
+            <th className="px-4 py-2 font-semibold">Цены</th>
+            <th className="px-4 py-2 font-semibold">Гл. преимущество</th>
+            <th className="px-4 py-2 font-semibold">Гл. недостаток</th>
           </tr>
         </thead>
         <tbody>

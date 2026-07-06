@@ -38,7 +38,7 @@ export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: stri
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? "Failed to start analysis");
+    throw new Error(err.detail ?? "Не удалось запустить анализ");
   }
   return res.json();
 }
@@ -48,7 +48,7 @@ export async function getAnalysisRun(runId: string): Promise<AnalysisRun> {
   const res = await fetch(`${API_URL}/analyze/${runId}`, { headers });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? "Failed to fetch run");
+    throw new Error(err.detail ?? "Не удалось загрузить анализ");
   }
   return res.json();
 }
@@ -57,7 +57,7 @@ export async function getSignedDocxUrl(path: string): Promise<string> {
   const { data, error } = await supabase.storage
     .from("reports")
     .createSignedUrl(path.replace("reports/", ""), 300); // 5-minute URL
-  if (error || !data?.signedUrl) throw new Error("Could not generate download link");
+  if (error || !data?.signedUrl) throw new Error("Не удалось создать ссылку на скачивание");
   return data.signedUrl;
 }
 
@@ -75,5 +75,5 @@ export async function pollUntilDone(
     if (run.status !== "running") return run;
     await new Promise((r) => setTimeout(r, intervalMs));
   }
-  throw new Error("Analysis timed out");
+  throw new Error("Время ожидания анализа истекло");
 }

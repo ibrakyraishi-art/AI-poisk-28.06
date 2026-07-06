@@ -28,7 +28,7 @@ export default function ResultsPage() {
           .catch(() => {/* storage may be local-only */});
       }
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Failed to load results");
+      setError(e instanceof Error ? e.message : "Не удалось загрузить результаты");
     }
   }, [runId, docxUrl]);
 
@@ -51,7 +51,7 @@ export default function ResultsPage() {
       <main className="max-w-2xl mx-auto px-4 py-16 text-center">
         <p className="text-red-600 font-medium">{error}</p>
         <button onClick={() => router.push("/dashboard")} className="mt-4 text-sm text-indigo-600 hover:underline">
-          Back to dashboard
+          Назад в кабинет
         </button>
       </main>
     );
@@ -60,7 +60,7 @@ export default function ResultsPage() {
   if (!run) {
     return (
       <main className="max-w-2xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-500">Loading…</p>
+        <p className="text-gray-500">Загрузка…</p>
       </main>
     );
   }
@@ -70,10 +70,10 @@ export default function ResultsPage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <button onClick={() => router.push("/dashboard")} className="text-sm text-indigo-600 hover:underline mb-2 block">
-            ← Dashboard
+            ← Кабинет
           </button>
           <h1 className="text-2xl font-bold">{run.company}</h1>
-          <p className="text-sm text-gray-400">{run.period} · started {new Date(run.created_at).toLocaleString()}</p>
+          <p className="text-sm text-gray-400">{run.period} · начат {new Date(run.created_at).toLocaleString("ru-RU")}</p>
         </div>
         {run.status === "completed" && docxUrl && (
           <a
@@ -81,7 +81,7 @@ export default function ResultsPage() {
             download
             className="shrink-0 rounded-lg bg-indigo-600 px-4 py-2 text-sm text-white font-semibold hover:bg-indigo-700"
           >
-            Download .docx
+            Скачать .docx
           </a>
         )}
       </div>
@@ -89,14 +89,14 @@ export default function ResultsPage() {
       {run.status === "running" && (
         <div className="rounded-xl border bg-blue-50 px-6 py-8 text-center space-y-3">
           <div className="mx-auto h-8 w-8 rounded-full border-4 border-indigo-600 border-t-transparent animate-spin" />
-          <p className="font-medium text-blue-800">Analysis in progress…</p>
-          <p className="text-sm text-blue-600">Collecting reviews, news and competitor data. This takes 3–8 minutes.</p>
+          <p className="font-medium text-blue-800">Анализ выполняется…</p>
+          <p className="text-sm text-blue-600">Собираем отзывы, новости и данные о конкурентах. Это занимает 3–8 минут.</p>
         </div>
       )}
 
       {run.status === "failed" && (
         <div className="rounded-xl border border-red-300 bg-red-50 px-6 py-6">
-          <p className="font-semibold text-red-700 mb-2">Analysis failed</p>
+          <p className="font-semibold text-red-700 mb-2">Анализ не удался</p>
           <pre className="text-xs text-red-600 whitespace-pre-wrap">{run.error ?? "Unknown error"}</pre>
         </div>
       )}
