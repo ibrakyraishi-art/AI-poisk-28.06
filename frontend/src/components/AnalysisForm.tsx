@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { startAnalysis, AnalyzeRequest } from "@/lib/api";
 
 interface Props {
@@ -40,7 +41,12 @@ export function AnalysisForm({ onStarted }: Props) {
       const { run_id } = await startAnalysis({ company, period, platform, model: model || undefined });
       onStarted(run_id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Неизвестная ошибка");
+      const msg = e instanceof Error ? e.message : "Неизвестная ошибка";
+      setError(
+        /failed to fetch|networkerror|load failed|fetch/i.test(msg)
+          ? "Не удалось связаться с сервером. Бесплатный бэкенд мог заснуть после простоя — подождите ~минуту и повторите."
+          : msg,
+      );
     } finally {
       setLoading(false);
     }
@@ -110,7 +116,14 @@ export function AnalysisForm({ onStarted }: Props) {
           </select>
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            <p>{error}</p>
+            <Link href="/settings" className="mt-1 inline-block text-xs font-medium text-indigo-300 hover:text-indigo-200">
+              Проверить API-ключи →
+            </Link>
+          </div>
+        )}
 
         <button
           type="submit"

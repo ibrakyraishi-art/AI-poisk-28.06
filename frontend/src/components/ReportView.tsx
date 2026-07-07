@@ -77,7 +77,7 @@ export function ReportView({ report }: { report: Report }) {
                     {SENTIMENT_LABEL[t.sentiment] ?? t.sentiment}
                   </span>
                 </div>
-                <p className="text-xs text-slate-500">Упоминаний: {t.review_count}</p>
+                <p className="text-xs text-slate-400">Упоминаний: {t.review_count}</p>
                 {t.examples && t.examples.length > 0 && (
                   <blockquote className="mt-2 border-l-2 border-indigo-400/50 pl-3 text-sm italic text-slate-400">
                     «{t.examples[0]}»

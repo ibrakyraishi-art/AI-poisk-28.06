@@ -112,7 +112,7 @@ export function AgentPipeline({ startedAt, status }: Props) {
                   {a.name}
                   {st === "active" && <span className="ml-2 text-xs font-normal text-indigo-300">выполняется…</span>}
                 </p>
-                <p className="text-xs text-slate-500">{a.desc}</p>
+                <p className="text-xs text-slate-400">{a.desc}</p>
               </div>
             </li>
           );

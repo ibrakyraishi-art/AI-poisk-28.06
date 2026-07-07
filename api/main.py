@@ -22,11 +22,21 @@ _ALLOWED_ORIGINS = [
     if origin.strip()
 ]
 
+# Always allow local dev + the production Vercel domain, even if the CORS_ORIGINS
+# env var on the host is stale (e.g. still points at an old preview URL).
+for _default in ("http://localhost:3000", "https://ai-poisk-28-06.vercel.app"):
+    if _default not in _ALLOWED_ORIGINS:
+        _ALLOWED_ORIGINS.append(_default)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_ALLOWED_ORIGINS,
+    # Every Vercel deployment (production alias + per-branch/per-commit previews)
+    # is served from a *.vercel.app host — allow them all so a redeploy never
+    # breaks CORS again.
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],
 )
 

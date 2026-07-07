@@ -54,10 +54,11 @@ export default function SettingsPage() {
       <AppHeader />
       <main className="max-w-lg mx-auto px-4 py-10">
         <h1 className="text-2xl font-bold mb-2 text-white">API-ключи (свои ключи)</h1>
-        <p className="text-sm text-slate-400 mb-8">
+        <p className="text-sm text-slate-400 mb-6">
           Ключи хранятся в вашей приватной строке Supabase под защитой Row-Level Security — читать их может только ваш аккаунт.
         </p>
 
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.35)] backdrop-blur-sm">
         <form onSubmit={handleSave} className="space-y-5">
           {KEY_FIELDS.map(({ id, label, placeholder }) => (
             <div key={id}>
@@ -86,6 +87,7 @@ export default function SettingsPage() {
             Сохранить ключи
           </button>
         </form>
+        </div>
       </main>
     </>
   );

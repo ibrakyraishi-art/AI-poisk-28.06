@@ -65,7 +65,7 @@ export default function DashboardPage() {
           ) : runs.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-white/15 bg-white/[0.02] px-6 py-10 text-center">
               <p className="text-sm font-medium text-slate-200">Пока нет анализов</p>
-              <p className="text-xs text-slate-500 mt-1">Введите название приложения выше и нажмите «Запустить анализ».</p>
+              <p className="text-xs text-slate-400 mt-1">Введите название приложения выше и нажмите «Запустить анализ».</p>
             </div>
           ) : (
             <ul className="space-y-2">
@@ -79,7 +79,7 @@ export default function DashboardPage() {
                     >
                       <div>
                         <p className="font-medium text-white">{r.company}</p>
-                        <p className="text-xs text-slate-500">{r.period} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</p>
+                        <p className="text-xs text-slate-400">{r.period} · {new Date(r.created_at).toLocaleDateString("ru-RU")}</p>
                       </div>
                       <span className={`text-xs font-medium px-2 py-1 rounded-full flex items-center gap-1 ${s.color}`}>
                         <span>{s.icon}</span>{s.label}

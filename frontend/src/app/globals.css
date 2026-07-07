@@ -2,6 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tell the browser this is a dark UI → native controls, form autofill and
+   scrollbars render in dark mode instead of clashing light defaults. */
+html { color-scheme: dark; }
+
 /* ── Custom flourishes ─────────────────────────────────────────────────── */
 
 /* Glowing pulse ring for the currently-active pipeline agent */

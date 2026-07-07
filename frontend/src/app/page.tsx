@@ -80,7 +80,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      <footer className="pt-6 text-xs text-slate-500">
+      <footer className="pt-6 text-xs text-slate-400">
         © 2026 CompetitorScope · AI-анализ конкурентов
       </footer>
     </main>
