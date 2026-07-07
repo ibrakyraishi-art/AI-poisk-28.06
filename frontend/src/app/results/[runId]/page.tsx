@@ -23,6 +23,7 @@ export default function ResultsPage() {
     try {
       const data = await getAnalysisRun(runId);
       setRun(data);
+      setError("");  // successful poll clears any prior transient error
 
       if (data.status === "completed" && data.report_docx_path && !docxUrl) {
         getSignedDocxUrl(data.report_docx_path)
@@ -30,6 +31,10 @@ export default function ResultsPage() {
           .catch(() => {/* storage may be local-only */});
       }
     } catch (e: unknown) {
+      // A single failed poll (Render cold-start blip) must NOT destroy an
+      // in-progress view — we only surface this fatally when there is no run
+      // to show yet (see `error && !run` below). Otherwise it shows as a soft
+      // "reconnecting" banner and the next poll recovers.
       setError(e instanceof Error ? e.message : "Не удалось загрузить результаты");
     }
   }, [runId, docxUrl]);
@@ -48,15 +53,20 @@ export default function ResultsPage() {
     return () => clearInterval(timer);
   }, [run, fetchRun]);
 
-  if (error) {
+  if (error && !run) {
     return (
       <>
         <AppHeader />
         <main className="max-w-2xl mx-auto px-4 py-16 text-center">
           <p className="font-medium text-red-400">{error}</p>
-          <button onClick={() => router.push("/dashboard")} className="mt-4 text-sm text-indigo-400 hover:text-indigo-300">
-            Назад в кабинет
-          </button>
+          <div className="mt-4 flex items-center justify-center gap-4">
+            <button onClick={fetchRun} className="text-sm font-medium text-indigo-400 hover:text-indigo-300">
+              Повторить
+            </button>
+            <button onClick={() => router.push("/dashboard")} className="text-sm text-slate-400 hover:text-slate-200">
+              Назад в кабинет
+            </button>
+          </div>
         </main>
       </>
     );
@@ -95,6 +105,12 @@ export default function ResultsPage() {
             </a>
           )}
         </div>
+
+        {error && (
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
+            Соединение прервалось — переподключаемся…
+          </div>
+        )}
 
         {run.status === "running" && (
           <AgentPipeline startedAt={run.created_at} status="running" />
