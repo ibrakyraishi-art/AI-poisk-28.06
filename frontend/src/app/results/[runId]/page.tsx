@@ -131,6 +131,7 @@ export default function ResultsPage() {
             status="running"
             progressPct={run.progress_pct}
             progressMsg={run.progress_msg}
+            company={run.company}
           />
         )}
 
