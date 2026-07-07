@@ -45,4 +45,6 @@ app.include_router(analyze_router)
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok"}
+    # `auth` marks which JWT-verification build is live — lets us confirm a Render
+    # redeploy actually landed. "es256+hs256" = the JWKS-aware build.
+    return {"status": "ok", "auth": "es256+hs256"}
