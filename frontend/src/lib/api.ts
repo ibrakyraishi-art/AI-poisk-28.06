@@ -14,6 +14,8 @@ export interface AnalyzeRequest {
   period: "30d" | "90d" | "6m";
   platform: "ios" | "android" | "both";
   model?: string;
+  /** Optional per-agent LLM overrides, e.g. { analyst_agent: "opus" }. */
+  agent_models?: Record<string, string>;
 }
 
 export interface AnalysisRun {

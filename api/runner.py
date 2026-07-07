@@ -18,6 +18,19 @@ from concurrent.futures import ThreadPoolExecutor
 
 from supabase import create_client
 
+from config.llm_config import DEFAULTS
+
+# Agents whose LLM can be chosen individually ("сменные мозги").
+_AGENT_NAMES = (
+    "reviews_agent",
+    "news_agent",
+    "business_context_agent",
+    "competitor_finder_agent",
+    "analyst_agent",
+    "report_writer_agent",
+    "manager_agent",
+)
+
 _executor = ThreadPoolExecutor(max_workers=4)
 
 # BYOK: maps user_api_keys.keys field names → LiteLLM env var names
@@ -38,41 +51,53 @@ _MODEL_PROVIDER = {
 }
 
 
-def _resolve_model_or_fail(model: str | None) -> str | None:
+def _pick_model_for_agent(agent_name: str, chosen: str | None) -> str | None:
     """
-    Pick a model the user actually has a key for, reading the BYOK keys already
-    injected into os.environ for this run. Raises ValueError with a clear,
-    user-facing (Russian) message when the required key is missing — so the run
-    fails fast instead of hanging on endless LLM retries.
+    Resolve ONE agent's model, reading the BYOK keys already injected into
+    os.environ for this run. Raises ValueError with a clear, user-facing
+    (Russian) message when the required key is missing — so the run fails fast
+    instead of hanging on endless LLM retries.
 
-    - explicit `model`: verify its provider key is present.
-    - default (`model is None`): the per-agent DEFAULTS mix Gemini (data agents)
-      and Claude (analysis), so they need BOTH providers. If the user has only
-      one, force a single-provider model so "По умолчанию" just works.
+    `chosen` — the explicit pick for this agent (per-agent override, or the
+    single global `model`), or None to use the agent's own default. When the
+    default's provider key is missing, we substitute a model the user does have
+    a key for, so a run never silently hangs.
     """
     has_google = bool(os.environ.get("GEMINI_API_KEY"))
     has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
     has_openai = bool(os.environ.get("OPENAI_API_KEY"))
 
-    if model:
-        needs = _MODEL_PROVIDER.get(model)
+    def _fallback() -> str:
+        if has_anthropic:
+            return "haiku"
+        if has_google:
+            return "gemini-flash"
+        if has_openai:
+            return "gpt-4o-mini"
+        raise ValueError("Не задан ни один LLM-ключ (Anthropic, Google AI или OpenAI). Добавьте ключ в настройках.")
+
+    if chosen:
+        needs = _MODEL_PROVIDER.get(chosen)
         if needs == "GEMINI_API_KEY" and not has_google:
             raise ValueError("Для модели Gemini Flash нужен ключ Google AI. Добавьте его в настройках или выберите модель Claude.")
         if needs == "ANTHROPIC_API_KEY" and not has_anthropic:
             raise ValueError("Для моделей Claude нужен ключ Anthropic. Добавьте его в настройках или выберите Gemini Flash.")
         if needs == "OPENAI_API_KEY" and not has_openai:
             raise ValueError("Для модели GPT нужен ключ OpenAI. Добавьте его в настройках.")
-        return model
+        return chosen
 
-    if has_google and has_anthropic:
-        return None            # per-agent defaults: cheap Gemini + smart Claude
-    if has_anthropic:
-        return "haiku"         # весь пайплайн на Claude Haiku — дёшево, без Google
-    if has_google:
-        return "gemini-flash"  # весь пайплайн на Gemini
-    if has_openai:
-        return "gpt-4o-mini"
-    raise ValueError("Не задан ни один LLM-ключ (Anthropic, Google AI или OpenAI). Добавьте ключ в настройках.")
+    # No explicit choice → use the agent's built-in default, adapted to keys.
+    default = DEFAULTS.get(agent_name, "haiku")
+    provider = _MODEL_PROVIDER.get(default)
+    if provider and os.environ.get(provider):
+        return None  # let create_*_agent apply its own DEFAULTS[agent_name]
+    return _fallback()
+
+
+def _resolve_agent_models(model: str | None, agent_models: dict[str, str] | None) -> dict[str, str | None]:
+    """Build the effective model per agent: per-agent override → global model → default."""
+    am = agent_models or {}
+    return {name: _pick_model_for_agent(name, am.get(name) or model) for name in _AGENT_NAMES}
 
 
 def _load_user_keys(user_id: str) -> dict[str, str]:
@@ -100,6 +125,7 @@ def start_analysis_run(
     period: str,
     platform: str,
     model: str | None,
+    agent_models: dict[str, str] | None = None,
 ) -> str:
     """Creates the DB record, fires off the crew in background, returns run_id."""
     client = _supabase()
@@ -114,7 +140,8 @@ def start_analysis_run(
     run_id: str = result.data[0]["id"]
 
     _executor.submit(_run_crew, run_id=run_id, user_id=user_id,
-                     company=company, period=period, platform=platform, model=model)
+                     company=company, period=period, platform=platform,
+                     model=model, agent_models=agent_models)
     return run_id
 
 
@@ -126,6 +153,7 @@ def _run_crew(
     period: str,
     platform: str,
     model: str | None,
+    agent_models: dict[str, str] | None = None,
 ) -> None:
     """Blocking crew execution — runs in a thread pool worker."""
     # BYOK: inject user's API keys into os.environ for this run
@@ -167,17 +195,18 @@ def _run_crew(
 
     client = _supabase()
     try:
-        # Fail fast (clear message) if the chosen model has no key; adapt the
-        # default model to whichever provider the user actually configured.
-        resolved_model = _resolve_model_or_fail(model)
+        # Per-agent model choice ("сменные мозги"): resolve+validate each agent's
+        # model (explicit override → global model → smart default). Fails fast
+        # with a clear message if a chosen model has no key.
+        m = _resolve_agent_models(model, agent_models)
 
-        reviews_agent          = create_reviews_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
-        news_agent             = create_news_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
-        business_context_agent = create_business_context_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
-        competitor_finder_agent= create_competitor_finder_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
-        analyst_agent          = create_analyst_agent(run_id=run_id, model_key=resolved_model)
-        report_writer_agent    = create_report_writer_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
-        manager_agent          = create_manager_agent(model_key=resolved_model)
+        reviews_agent          = create_reviews_agent(run_id=run_id, user_id=user_id, model_key=m["reviews_agent"])
+        news_agent             = create_news_agent(run_id=run_id, user_id=user_id, model_key=m["news_agent"])
+        business_context_agent = create_business_context_agent(run_id=run_id, user_id=user_id, model_key=m["business_context_agent"])
+        competitor_finder_agent= create_competitor_finder_agent(run_id=run_id, user_id=user_id, model_key=m["competitor_finder_agent"])
+        analyst_agent          = create_analyst_agent(run_id=run_id, model_key=m["analyst_agent"])
+        report_writer_agent    = create_report_writer_agent(run_id=run_id, user_id=user_id, model_key=m["report_writer_agent"])
+        manager_agent          = create_manager_agent(model_key=m["manager_agent"])
 
         reviews_task = create_reviews_task(reviews_agent, app_name=company, period=period)
         retry_reviews_task = ConditionalTask(

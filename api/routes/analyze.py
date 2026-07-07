@@ -8,9 +8,21 @@ from pydantic import BaseModel
 
 from api.auth import verify_jwt
 from api.runner import start_analysis_run
+from config.llm_config import MODELS
 from supabase import create_client
 
 router = APIRouter()
+
+# Agents whose LLM can be chosen individually.
+_AGENT_NAMES = {
+    "reviews_agent",
+    "news_agent",
+    "business_context_agent",
+    "competitor_finder_agent",
+    "analyst_agent",
+    "report_writer_agent",
+    "manager_agent",
+}
 
 
 def _supabase():
@@ -22,6 +34,8 @@ class AnalyzeRequest(BaseModel):
     period: str = "30d"
     platform: str = "both"
     model: str | None = None
+    # Optional per-agent LLM overrides, e.g. {"analyst_agent": "opus"}.
+    agent_models: dict[str, str] | None = None
 
 
 class AnalyzeResponse(BaseModel):
@@ -39,12 +53,22 @@ def post_analyze(
     if not body.company.strip():
         raise HTTPException(status_code=422, detail="company is required")
 
+    if body.model is not None and body.model not in MODELS:
+        raise HTTPException(status_code=422, detail=f"unknown model '{body.model}'")
+    if body.agent_models:
+        for agent, model_key in body.agent_models.items():
+            if agent not in _AGENT_NAMES:
+                raise HTTPException(status_code=422, detail=f"unknown agent '{agent}'")
+            if model_key not in MODELS:
+                raise HTTPException(status_code=422, detail=f"unknown model '{model_key}' for {agent}")
+
     run_id = start_analysis_run(
         user_id=user_id,
         company=body.company.strip(),
         period=body.period,
         platform=body.platform,
         model=body.model,
+        agent_models=body.agent_models,
     )
     return AnalyzeResponse(run_id=run_id, status="running")
 
