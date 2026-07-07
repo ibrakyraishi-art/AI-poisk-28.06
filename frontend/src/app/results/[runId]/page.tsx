@@ -113,7 +113,12 @@ export default function ResultsPage() {
         )}
 
         {run.status === "running" && (
-          <AgentPipeline startedAt={run.created_at} status="running" />
+          <AgentPipeline
+            startedAt={run.created_at}
+            status="running"
+            progressPct={run.progress_pct}
+            progressMsg={run.progress_msg}
+          />
         )}
 
         {run.status === "failed" && (

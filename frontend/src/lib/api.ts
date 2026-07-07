@@ -24,6 +24,8 @@ export interface AnalysisRun {
   company: string;
   period: string;
   status: "running" | "completed" | "failed";
+  progress_pct: number | null;
+  progress_msg: string | null;
   report_json: Record<string, unknown> | null;
   report_docx_path: string | null;
   error: string | null;

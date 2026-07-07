@@ -13,12 +13,25 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 from supabase import create_client
 
 from config.llm_config import DEFAULTS
+
+# Human-readable stage labels for real per-agent progress (написано в
+# analysis_runs.progress_msg по мере завершения задач).
+_STAGE_LABEL = {
+    "business_context_agent": "Исследование рынка",
+    "reviews_agent": "Анализ отзывов",
+    "news_agent": "Анализ новостей",
+    "competitor_finder_agent": "Поиск конкурентов",
+    "analyst_agent": "Стратегический анализ",
+    "report_writer_agent": "Составление отчёта",
+}
+_TOTAL_STAGES = len(_STAGE_LABEL)
 
 # Agents whose LLM can be chosen individually ("сменные мозги").
 _AGENT_NAMES = (
@@ -224,6 +237,47 @@ def _run_crew(
         competitor_finder_task= create_competitor_finder_task(competitor_finder_agent, company=company, context_tasks=[business_context_task])
         analyst_task          = create_analyst_task(analyst_agent, company=company, period=period, context_tasks=[reviews_task, retry_reviews_task, news_task])
         report_task           = create_report_task(report_writer_agent, company=company, period=period, context_tasks=[reviews_task, retry_reviews_task, business_context_task, news_task, competitor_finder_task, analyst_task])
+
+        # ── Real progress: write which agents have finished to analysis_runs as
+        # each task completes (frontend AgentPipeline reads this instead of a
+        # time-based guess). progress_msg holds JSON {done: [...], note: "..."}.
+        _done: list[str] = []
+        _lock = threading.Lock()
+
+        def _write_progress(note: str) -> None:
+            with _lock:
+                payload = json.dumps({"done": list(_done), "note": note}, ensure_ascii=False)
+                pct = round(len(_done) / _TOTAL_STAGES * 100)
+            try:
+                client.table("analysis_runs").update(
+                    {"progress_pct": pct, "progress_msg": payload}
+                ).eq("id", run_id).execute()
+            except Exception:
+                pass  # progress is best-effort; never break the run over it
+
+        def _make_cb(agent_key: str):
+            label = _STAGE_LABEL.get(agent_key, agent_key)
+            def _cb(_output):  # noqa: ANN001 — CrewAI passes a TaskOutput we don't need
+                with _lock:
+                    if agent_key not in _done:
+                        _done.append(agent_key)
+                _write_progress(f"{label} — готово")
+            return _cb
+
+        for _task, _key in (
+            (business_context_task, "business_context_agent"),
+            (reviews_task, "reviews_agent"),
+            (news_task, "news_agent"),
+            (competitor_finder_task, "competitor_finder_agent"),
+            (analyst_task, "analyst_agent"),
+            (report_task, "report_writer_agent"),
+        ):
+            try:
+                _task.callback = _make_cb(_key)
+            except Exception:
+                pass  # if this CrewAI version rejects the assignment, run anyway
+
+        _write_progress("Запускаем агентов…")
 
         crew = Crew(
             agents=[reviews_agent, news_agent, business_context_agent, competitor_finder_agent, analyst_agent, report_writer_agent],
