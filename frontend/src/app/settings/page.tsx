@@ -28,8 +28,8 @@ const KEY_FIELDS = [
     id: "serper_api_key",
     label: "Ключ Serper API (веб-поиск)",
     placeholder: "...",
-    desc: "Поиск конкурентов и новостей через Google. Бесплатно 2500 запросов.",
-    href: "https://serper.dev/api-key",
+    desc: "Поиск конкурентов и новостей через Google. Бесплатно 2500 запросов. Ключ — после регистрации в разделе Dashboard.",
+    href: "https://serper.dev",
     hrefText: "serper.dev",
   },
   {
