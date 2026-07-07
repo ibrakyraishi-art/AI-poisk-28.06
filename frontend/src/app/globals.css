@@ -32,6 +32,40 @@ html { color-scheme: dark; }
   animation: shimmer 6s linear infinite;
 }
 
+/* Working-robot bob for the active pipeline agent */
+@keyframes bob {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50%      { transform: translateY(-3px) rotate(2deg); }
+}
+.animate-bob { animation: bob 1.6s ease-in-out infinite; }
+
+/* Slow gear spin badge on the active agent */
+@keyframes spin360 { to { transform: rotate(360deg); } }
+.animate-spin-slow { animation: spin360 2.6s linear infinite; }
+
+/* Typing dots inside the agent speech bubble */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30%           { opacity: 1;    transform: translateY(-2px); }
+}
+.typing-dot { animation: typing-dot 1.2s ease-in-out infinite; }
+
+/* Data "packets" flowing down the pipeline connector */
+@keyframes flow-down {
+  0%   { top: -2%;  opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 96%;  opacity: 0; }
+}
+.animate-flow-down { animation: flow-down 1.8s ease-in infinite; }
+
+/* Speech bubble entrance */
+@keyframes bubble-in {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-bubble-in { animation: bubble-in 0.35s ease-out both; }
+
 /* Thin custom scrollbar to match the dark theme */
 * {
   scrollbar-width: thin;
