@@ -28,6 +28,52 @@ _BYOK_KEY_MAP = {
     "news_api_key": "NEWS_API_KEY",
 }
 
+# Which provider key (env var) each model requires.
+_MODEL_PROVIDER = {
+    "gemini-flash": "GEMINI_API_KEY",
+    "haiku": "ANTHROPIC_API_KEY",
+    "sonnet": "ANTHROPIC_API_KEY",
+    "opus": "ANTHROPIC_API_KEY",
+    "gpt-4o-mini": "OPENAI_API_KEY",
+}
+
+
+def _resolve_model_or_fail(model: str | None) -> str | None:
+    """
+    Pick a model the user actually has a key for, reading the BYOK keys already
+    injected into os.environ for this run. Raises ValueError with a clear,
+    user-facing (Russian) message when the required key is missing — so the run
+    fails fast instead of hanging on endless LLM retries.
+
+    - explicit `model`: verify its provider key is present.
+    - default (`model is None`): the per-agent DEFAULTS mix Gemini (data agents)
+      and Claude (analysis), so they need BOTH providers. If the user has only
+      one, force a single-provider model so "По умолчанию" just works.
+    """
+    has_google = bool(os.environ.get("GEMINI_API_KEY"))
+    has_anthropic = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    has_openai = bool(os.environ.get("OPENAI_API_KEY"))
+
+    if model:
+        needs = _MODEL_PROVIDER.get(model)
+        if needs == "GEMINI_API_KEY" and not has_google:
+            raise ValueError("Для модели Gemini Flash нужен ключ Google AI. Добавьте его в настройках или выберите модель Claude.")
+        if needs == "ANTHROPIC_API_KEY" and not has_anthropic:
+            raise ValueError("Для моделей Claude нужен ключ Anthropic. Добавьте его в настройках или выберите Gemini Flash.")
+        if needs == "OPENAI_API_KEY" and not has_openai:
+            raise ValueError("Для модели GPT нужен ключ OpenAI. Добавьте его в настройках.")
+        return model
+
+    if has_google and has_anthropic:
+        return None            # per-agent defaults: cheap Gemini + smart Claude
+    if has_anthropic:
+        return "haiku"         # весь пайплайн на Claude Haiku — дёшево, без Google
+    if has_google:
+        return "gemini-flash"  # весь пайплайн на Gemini
+    if has_openai:
+        return "gpt-4o-mini"
+    raise ValueError("Не задан ни один LLM-ключ (Anthropic, Google AI или OpenAI). Добавьте ключ в настройках.")
+
 
 def _load_user_keys(user_id: str) -> dict[str, str]:
     """Fetch user's BYOK keys from user_api_keys table and return as env-var dict."""
@@ -121,13 +167,17 @@ def _run_crew(
 
     client = _supabase()
     try:
-        reviews_agent          = create_reviews_agent(run_id=run_id, user_id=user_id, model_key=model)
-        news_agent             = create_news_agent(run_id=run_id, user_id=user_id, model_key=model)
-        business_context_agent = create_business_context_agent(run_id=run_id, user_id=user_id, model_key=model)
-        competitor_finder_agent= create_competitor_finder_agent(run_id=run_id, user_id=user_id, model_key=model)
-        analyst_agent          = create_analyst_agent(run_id=run_id, model_key=model)
-        report_writer_agent    = create_report_writer_agent(run_id=run_id, user_id=user_id, model_key=model)
-        manager_agent          = create_manager_agent(model_key=model)
+        # Fail fast (clear message) if the chosen model has no key; adapt the
+        # default model to whichever provider the user actually configured.
+        resolved_model = _resolve_model_or_fail(model)
+
+        reviews_agent          = create_reviews_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
+        news_agent             = create_news_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
+        business_context_agent = create_business_context_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
+        competitor_finder_agent= create_competitor_finder_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
+        analyst_agent          = create_analyst_agent(run_id=run_id, model_key=resolved_model)
+        report_writer_agent    = create_report_writer_agent(run_id=run_id, user_id=user_id, model_key=resolved_model)
+        manager_agent          = create_manager_agent(model_key=resolved_model)
 
         reviews_task = create_reviews_task(reviews_agent, app_name=company, period=period)
         retry_reviews_task = ConditionalTask(
@@ -163,6 +213,12 @@ def _run_crew(
             "report_docx_path": f"reports/{run_id}/report.docx",
         }).eq("id", run_id).execute()
 
+    except ValueError as exc:
+        # Missing/mismatched API key — surface the clear message, not a traceback.
+        client.table("analysis_runs").update({
+            "status": "failed",
+            "error": str(exc),
+        }).eq("id", run_id).execute()
     except Exception:
         client.table("analysis_runs").update({
             "status": "failed",

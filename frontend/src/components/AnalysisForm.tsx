@@ -15,7 +15,7 @@ const PERIODS = [
 ];
 
 const MODELS = [
-  { value: "", label: "По умолчанию (Gemini Flash)" },
+  { value: "", label: "По умолчанию (авто по вашим ключам)" },
   { value: "haiku", label: "Claude Haiku (быстро)" },
   { value: "sonnet", label: "Claude Sonnet (баланс)" },
   { value: "opus", label: "Claude Opus (лучшее, ~$2)" },
