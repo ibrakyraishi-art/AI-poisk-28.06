@@ -467,3 +467,29 @@ NEXT_PUBLIC_API_URL=https://your-railway-app.up.railway.app
 
 Живой пайплайн из 7 агентов снять не удалось — запуск анализа блокировался CORS.
 После редеплоя Render нужно повторить прогон и доснять `agents_running_*` + отчёт.
+
+---
+
+## 2026-07-07 — JWT ES256 + подсказки к API-ключам
+
+### 🔴 401 на /analyze — алгоритм JWT (коммит `27fac35`)
+
+После фикса CORS запрос дошёл до бэкенда, но вернул `401: The specified alg value
+is not allowed`. Причина: Supabase подписывает access-токены **асимметрично (ES256
+через JWKS)**, а `api/auth.py` принимал только legacy `HS256`.
+- **Фикс** (`api/auth.py`): `verify_jwt()` читает `alg` из заголовка токена и проверяет
+  подпись соответствующе — HS256 по `SUPABASE_JWT_SECRET`, ES256/RS256 по публичному
+  ключу из JWKS Supabase (`{SUPABASE_URL}/auth/v1/.well-known/jwks.json`,
+  кэш через `PyJWKClient`). Работает и на старых, и на новых проектах.
+- `requirements.txt`: `PyJWT` → `PyJWT[crypto]` (для ES256 нужен `cryptography`).
+
+### Подсказки к API-ключам (коммит `8a998e2`)
+
+Страница `/settings`: у каждого ключа теперь описание (для чего), прямая ссылка
+«Получить ключ ↗» (console.anthropic.com / aistudio.google.com / serper.dev /
+newsapi.org) и плашка сверху (нужен минимум один LLM-ключ).
+
+### Всё ещё не проверено вживую
+
+Живой пайплайн из 7 агентов по-прежнему не снят — теперь ждём редеплой Render с JWT-фиксом,
+затем повторный прогон анализа.
