@@ -1,7 +1,9 @@
 # ── Web server ───────────────────────────────────────────────────────────────
 fastapi>=0.111.0
 uvicorn[standard]>=0.29.0
-PyJWT>=2.8.0
+# [crypto] extra pulls `cryptography` — required to verify Supabase's asymmetric
+# (ES256/RS256) JWTs via JWKS, not just legacy HS256.
+PyJWT[crypto]>=2.8.0
 
 # ── Core AI framework ───────────────────────────────────────────────────────
 # <1.0.0 обязательно: crewai 1.x сломал три вещи, от которых мы зависим:
