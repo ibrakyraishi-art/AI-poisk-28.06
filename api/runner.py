@@ -131,6 +131,18 @@ def _supabase():
     return create_client(os.environ["SUPABASE_URL"], os.environ["SUPABASE_SERVICE_KEY"])
 
 
+def _approach_note(platform: str, period: str) -> str:
+    stores = {
+        "both": "App Store и Google Play",
+        "ios": "App Store",
+        "android": "Google Play",
+    }.get(platform, "магазинов приложений")
+    return (
+        f"Соберу отзывы из {stores}, свежие новости за период {period}, "
+        "профили выбранных конкурентов, затем сведу всё в SWOT и рекомендации."
+    )
+
+
 def start_analysis_run(
     *,
     user_id: str,
@@ -139,23 +151,129 @@ def start_analysis_run(
     platform: str,
     model: str | None,
     agent_models: dict[str, str] | None = None,
-) -> str:
-    """Creates the DB record, fires off the crew in background, returns run_id."""
+    confirm_plan: bool = False,
+) -> tuple[str, str]:
+    """Creates the DB record, fires off the background work, returns (run_id, status).
+
+    confirm_plan=True → phase 1 only (propose a plan, then wait for approval).
+    confirm_plan=False → full pipeline immediately (legacy behaviour).
+    """
+    status = "planning" if confirm_plan else "running"
     client = _supabase()
     result = client.table("analysis_runs").insert({
         "user_id": user_id,
         "company": company,
         "period": period,
-        "status": "running",
+        "status": status,
     }).execute()
     if not result.data:
         raise RuntimeError("Failed to create analysis run — Supabase insert returned no data")
     run_id: str = result.data[0]["id"]
 
-    _executor.submit(_run_crew, run_id=run_id, user_id=user_id,
-                     company=company, period=period, platform=platform,
-                     model=model, agent_models=agent_models)
-    return run_id
+    if confirm_plan:
+        _executor.submit(_run_plan, run_id=run_id, user_id=user_id,
+                         company=company, period=period, platform=platform,
+                         model=model, agent_models=agent_models)
+    else:
+        _executor.submit(_run_crew, run_id=run_id, user_id=user_id,
+                         company=company, period=period, platform=platform,
+                         model=model, agent_models=agent_models)
+    return run_id, status
+
+
+def resume_analysis_run(*, run_id: str, user_id: str, competitors: list[str]) -> None:
+    """Phase 2: user approved the plan → run the full pipeline pinned to the
+    confirmed competitor list. Reads model/platform config saved in plan_json."""
+    client = _supabase()
+    result = client.table("analysis_runs").select("*").eq("id", run_id).execute()
+    if not result.data:
+        raise RuntimeError("run not found")
+    run = result.data[0]
+    cfg = (run.get("plan_json") or {}).get("config") or {}
+
+    client.table("analysis_runs").update({
+        "status": "running",
+        "competitors": competitors,
+        "progress_pct": 0,
+        "progress_msg": None,
+    }).eq("id", run_id).execute()
+
+    _executor.submit(
+        _run_crew,
+        run_id=run_id,
+        user_id=user_id,
+        company=run["company"],
+        period=run["period"],
+        platform=cfg.get("platform", "both"),
+        model=cfg.get("model"),
+        agent_models=cfg.get("agent_models"),
+        confirmed_competitors=competitors,
+    )
+
+
+def _run_plan(
+    *,
+    run_id: str,
+    user_id: str,
+    company: str,
+    period: str,
+    platform: str,
+    model: str | None,
+    agent_models: dict[str, str] | None = None,
+) -> None:
+    """Phase 1: run only the Business Context agent to propose an analysis plan
+    (category, audience, competitors) → status awaiting_approval."""
+    user_keys = _load_user_keys(user_id)
+    _prev_env: dict[str, str | None] = {}
+    for env_var, value in user_keys.items():
+        _prev_env[env_var] = os.environ.get(env_var)
+        os.environ[env_var] = value
+
+    from crewai import Crew, Process
+
+    from agents.business_context_agent import (
+        create_business_context_agent,
+        create_business_context_task,
+    )
+
+    client = _supabase()
+    try:
+        bc_model = _pick_model_for_agent(
+            "business_context_agent",
+            (agent_models or {}).get("business_context_agent") or model,
+        )
+        bc_agent = create_business_context_agent(run_id=run_id, user_id=user_id, model_key=bc_model)
+        bc_task = create_business_context_task(bc_agent, company=company, period=period)
+        crew = Crew(agents=[bc_agent], tasks=[bc_task], process=Process.sequential, verbose=False)
+
+        output = crew.kickoff()
+        bc = output.pydantic
+
+        competitors = list(getattr(bc, "main_competitors", []) or [])
+        plan = {
+            "category": getattr(bc, "category", None),
+            "target_audience": getattr(bc, "target_audience", None),
+            "key_differentiators": list(getattr(bc, "key_differentiators", []) or []),
+            "market_context": getattr(bc, "market_context", None),
+            "approach": _approach_note(platform, period),
+            "config": {"model": model, "agent_models": agent_models, "platform": platform},
+        }
+        client.table("analysis_runs").update({
+            "status": "awaiting_approval",
+            "competitors": competitors,
+            "plan_json": plan,
+        }).eq("id", run_id).execute()
+
+    except ValueError as exc:
+        client.table("analysis_runs").update({"status": "failed", "error": str(exc)}).eq("id", run_id).execute()
+    except Exception:
+        client.table("analysis_runs").update({"status": "failed", "error": traceback.format_exc()[-2000:]}).eq("id", run_id).execute()
+    finally:
+        for env_var, original in _prev_env.items():
+            if original is None:
+                os.environ.pop(env_var, None)
+            else:
+                os.environ[env_var] = original
 
 
 def _run_crew(
@@ -167,6 +285,7 @@ def _run_crew(
     platform: str,
     model: str | None,
     agent_models: dict[str, str] | None = None,
+    confirmed_competitors: list[str] | None = None,
 ) -> None:
     """Blocking crew execution — runs in a thread pool worker."""
     # BYOK: inject user's API keys into os.environ for this run
@@ -234,7 +353,7 @@ def _run_crew(
         )
         business_context_task = create_business_context_task(business_context_agent, company=company, period=period)
         news_task             = create_news_task(news_agent, company=company, period=period)
-        competitor_finder_task= create_competitor_finder_task(competitor_finder_agent, company=company, context_tasks=[business_context_task])
+        competitor_finder_task= create_competitor_finder_task(competitor_finder_agent, company=company, context_tasks=[business_context_task], competitors=confirmed_competitors)
         analyst_task          = create_analyst_task(analyst_agent, company=company, period=period, context_tasks=[reviews_task, retry_reviews_task, news_task])
         report_task           = create_report_task(report_writer_agent, company=company, period=period, context_tasks=[reviews_task, retry_reviews_task, business_context_task, news_task, competitor_finder_task, analyst_task])
 

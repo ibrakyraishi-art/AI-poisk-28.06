@@ -54,6 +54,7 @@ export function AnalysisForm({ onStarted }: Props) {
   const [model, setModel] = useState("");
   const [agentModels, setAgentModels] = useState<Record<string, string>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [confirmPlan, setConfirmPlan] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showCostWarning, setShowCostWarning] = useState(false);
@@ -77,6 +78,7 @@ export function AnalysisForm({ onStarted }: Props) {
         platform,
         model: model || undefined,
         agent_models: Object.keys(overrides).length ? overrides : undefined,
+        confirm_plan: confirmPlan,
       });
       onStarted(run_id);
     } catch (e: unknown) {
@@ -199,6 +201,21 @@ export function AnalysisForm({ onStarted }: Props) {
             </div>
           )}
         </div>
+
+        <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 text-sm text-slate-300">
+          <input
+            type="checkbox"
+            checked={confirmPlan}
+            onChange={(e) => setConfirmPlan(e.target.checked)}
+            className="mt-0.5 h-4 w-4 flex-shrink-0 accent-indigo-500"
+          />
+          <span>
+            Сначала показать план
+            <span className="mt-0.5 block text-xs text-slate-500">
+              Агент предложит конкурентов и подход — вы подтвердите или поправите перед полным анализом.
+            </span>
+          </span>
+        </label>
 
         {error && (
           <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">

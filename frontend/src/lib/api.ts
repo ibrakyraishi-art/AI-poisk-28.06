@@ -16,6 +16,16 @@ export interface AnalyzeRequest {
   model?: string;
   /** Optional per-agent LLM overrides, e.g. { analyst_agent: "opus" }. */
   agent_models?: Record<string, string>;
+  /** Human-in-the-loop: propose a plan and wait for approval first. */
+  confirm_plan?: boolean;
+}
+
+export interface AnalysisPlan {
+  category?: string | null;
+  target_audience?: string | null;
+  key_differentiators?: string[] | null;
+  market_context?: string | null;
+  approach?: string | null;
 }
 
 export interface AnalysisRun {
@@ -23,9 +33,11 @@ export interface AnalysisRun {
   user_id: string;
   company: string;
   period: string;
-  status: "running" | "completed" | "failed";
+  status: "planning" | "awaiting_approval" | "running" | "completed" | "failed";
   progress_pct: number | null;
   progress_msg: string | null;
+  competitors: string[] | null;
+  plan_json: AnalysisPlan | null;
   report_json: Record<string, unknown> | null;
   report_docx_path: string | null;
   error: string | null;
@@ -33,7 +45,7 @@ export interface AnalysisRun {
   completed_at: string | null;
 }
 
-export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: string }> {
+export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: string; status: string }> {
   const headers = await authHeaders();
   const res = await fetch(`${API_URL}/analyze`, {
     method: "POST",
@@ -43,6 +55,21 @@ export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: stri
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(err.detail ?? "Не удалось запустить анализ");
+  }
+  return res.json();
+}
+
+/** Approve the proposed plan (with an edited competitor list) → phase 2. */
+export async function approveAnalysis(runId: string, competitors: string[]): Promise<{ run_id: string }> {
+  const headers = await authHeaders();
+  const res = await fetch(`${API_URL}/analyze/${runId}/approve`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ competitors }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail ?? "Не удалось подтвердить план");
   }
   return res.json();
 }

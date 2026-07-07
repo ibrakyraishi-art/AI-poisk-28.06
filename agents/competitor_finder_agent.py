@@ -61,13 +61,26 @@ def create_competitor_finder_task(
     *,
     company: str,
     context_tasks: list[Task],
+    competitors: list[str] | None = None,
 ) -> Task:
+    # When the user confirmed a competitor list (human-in-the-loop plan step),
+    # pin it instead of letting the agent discover competitors from context.
+    if competitors:
+        names = ", ".join(competitors)
+        step1 = (
+            f"1. Research EXACTLY these competitors chosen by the user: {names}.\n"
+            f"   Research all of them (do not add or drop any).\n\n"
+        )
+    else:
+        step1 = (
+            "1. Read the main_competitors list from the Business Context output in your context.\n"
+            f"   Research at least {COMPETITOR_MIN_COUNT} competitors, up to 5.\n\n"
+        )
     return Task(
         description=(
             f"Build a competitor comparison matrix for '{company}'.\n\n"
             "Steps:\n"
-            "1. Read the main_competitors list from the Business Context output in your context.\n"
-            f"   Research at least {COMPETITOR_MIN_COUNT} competitors, up to 5.\n\n"
+            + step1 +
             "2. For EACH competitor, run two web searches:\n"
             "   a. '<competitor name> app review rating price 2026'\n"
             "   b. '<competitor name> app features pros cons users'\n\n"

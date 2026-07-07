@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase";
 import { getAnalysisRun, getSignedDocxUrl, AnalysisRun } from "@/lib/api";
 import { AppHeader } from "@/components/AppHeader";
 import { AgentPipeline } from "@/components/AgentPipeline";
+import { PlanReview } from "@/components/PlanReview";
 import { ReportView } from "@/components/ReportView";
 
 const POLL_INTERVAL = 5000;
@@ -48,7 +49,7 @@ export default function ResultsPage() {
   }, []);
 
   useEffect(() => {
-    if (!run || run.status !== "running") return;
+    if (!run || (run.status !== "running" && run.status !== "planning")) return;
     const timer = setInterval(fetchRun, POLL_INTERVAL);
     return () => clearInterval(timer);
   }, [run, fetchRun]);
@@ -110,6 +111,18 @@ export default function ResultsPage() {
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
             Соединение прервалось — переподключаемся…
           </div>
+        )}
+
+        {run.status === "planning" && (
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-6 py-10 text-center backdrop-blur-sm">
+            <div className="mx-auto mb-3 h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+            <p className="font-medium text-white">Готовлю план анализа…</p>
+            <p className="mt-1 text-sm text-slate-400">Агент изучает рынок и подбирает конкурентов. Это займёт ~минуту.</p>
+          </div>
+        )}
+
+        {run.status === "awaiting_approval" && (
+          <PlanReview run={run} onApproved={fetchRun} />
         )}
 
         {run.status === "running" && (

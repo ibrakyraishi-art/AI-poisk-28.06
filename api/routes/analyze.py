@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
 from api.auth import verify_jwt
-from api.runner import start_analysis_run
+from api.runner import resume_analysis_run, start_analysis_run
 from config.llm_config import MODELS
 from supabase import create_client
 
@@ -36,6 +36,12 @@ class AnalyzeRequest(BaseModel):
     model: str | None = None
     # Optional per-agent LLM overrides, e.g. {"analyst_agent": "opus"}.
     agent_models: dict[str, str] | None = None
+    # Human-in-the-loop: propose a plan and wait for approval before the full run.
+    confirm_plan: bool = False
+
+
+class ApproveRequest(BaseModel):
+    competitors: list[str] = []
 
 
 class AnalyzeResponse(BaseModel):
@@ -62,14 +68,36 @@ def post_analyze(
             if model_key not in MODELS:
                 raise HTTPException(status_code=422, detail=f"unknown model '{model_key}' for {agent}")
 
-    run_id = start_analysis_run(
+    run_id, status = start_analysis_run(
         user_id=user_id,
         company=body.company.strip(),
         period=body.period,
         platform=body.platform,
         model=body.model,
         agent_models=body.agent_models,
+        confirm_plan=body.confirm_plan,
     )
+    return AnalyzeResponse(run_id=run_id, status=status)
+
+
+@router.post("/analyze/{run_id}/approve", response_model=AnalyzeResponse)
+def post_approve(
+    run_id: str,
+    body: ApproveRequest,
+    user_id: str = Depends(verify_jwt),
+) -> AnalyzeResponse:
+    client = _supabase()
+    result = client.table("analysis_runs").select("user_id, status").eq("id", run_id).execute()
+    if not result.data:
+        raise HTTPException(status_code=404, detail="Run not found")
+    run = result.data[0]
+    if run["user_id"] != user_id:  # P0: ownership check
+        raise HTTPException(status_code=403, detail="Access denied")
+    if run["status"] != "awaiting_approval":
+        raise HTTPException(status_code=409, detail="Run is not awaiting approval")
+
+    competitors = [c.strip() for c in body.competitors if c and c.strip()]
+    resume_analysis_run(run_id=run_id, user_id=user_id, competitors=competitors)
     return AnalyzeResponse(run_id=run_id, status="running")
 
 
