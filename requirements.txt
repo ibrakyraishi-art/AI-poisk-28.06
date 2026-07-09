@@ -15,7 +15,9 @@ PyJWT[crypto]>=2.8.0
 crewai==0.86.0
 
 # ── Embeddings (локально, без API-ключей) ────────────────────────────────────
-sentence-transformers>=2.7.0
+# fastembed = ONNX-эмбеддинги без torch: torch на импорте съедал сотни МБ и
+# убивал процесс на Render free tier (512 MB). Модель та же: all-MiniLM-L6-v2.
+fastembed>=0.3.6
 
 # ── Database ─────────────────────────────────────────────────────────────────
 supabase>=2.0.0

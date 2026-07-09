@@ -223,21 +223,28 @@ def _run_plan(
 ) -> None:
     """Phase 1: run only the Business Context agent to propose an analysis plan
     (category, audience, competitors) → status awaiting_approval."""
-    user_keys = _load_user_keys(user_id)
-    _prev_env: dict[str, str | None] = {}
-    for env_var, value in user_keys.items():
-        _prev_env[env_var] = os.environ.get(env_var)
-        os.environ[env_var] = value
-
-    from crewai import Crew, Process
-
-    from agents.business_context_agent import (
-        create_business_context_agent,
-        create_business_context_task,
-    )
-
     client = _supabase()
+    _prev_env: dict[str, str | None] = {}
     try:
+        # First write ASAP: if this thread dies (imports / OOM), the marker shows
+        # exactly how far it got instead of an eternal silent "planning".
+        client.table("analysis_runs").update(
+            {"progress_pct": 0, "progress_msg": json.dumps({"done": [], "note": "Готовлю окружение…"}, ensure_ascii=False)}
+        ).eq("id", run_id).execute()
+
+        # BYOK: inject user's API keys into os.environ for this run
+        user_keys = _load_user_keys(user_id)
+        for env_var, value in user_keys.items():
+            _prev_env[env_var] = os.environ.get(env_var)
+            os.environ[env_var] = value
+
+        from crewai import Crew, Process
+
+        from agents.business_context_agent import (
+            create_business_context_agent,
+            create_business_context_task,
+        )
+
         bc_model = _pick_model_for_agent(
             "business_context_agent",
             (agent_models or {}).get("business_context_agent") or model,
@@ -288,45 +295,51 @@ def _run_crew(
     confirmed_competitors: list[str] | None = None,
 ) -> None:
     """Blocking crew execution — runs in a thread pool worker."""
-    # BYOK: inject user's API keys into os.environ for this run
-    user_keys = _load_user_keys(user_id)
-    _prev_env: dict[str, str | None] = {}
-    for env_var, value in user_keys.items():
-        _prev_env[env_var] = os.environ.get(env_var)
-        os.environ[env_var] = value
-
-    from crewai import ConditionalTask, Crew, Process
-
-    from agents.analyst_agent import create_analyst_agent, create_analyst_task
-    from agents.business_context_agent import (
-        create_business_context_agent,
-        create_business_context_task,
-    )
-    from agents.competitor_finder_agent import (
-        create_competitor_finder_agent,
-        create_competitor_finder_task,
-    )
-    from agents.manager_agent import create_manager_agent
-    from agents.news_agent import create_news_agent, create_news_task
-    from agents.report_writer_agent import create_report_writer_agent, create_report_task
-    from agents.reviews_agent import create_reviews_agent, create_reviews_task
-    from config.limits import MIN_CONFIDENCE, MIN_REVIEW_COUNT
-    from models.schemas import ReviewData
-
-    _PERIOD_ESCALATION = {"30d": "90d", "90d": "6m", "6m": "6m"}
-    extended_period = _PERIOD_ESCALATION[period]
-
-    def _needs_retry(task_output) -> bool:
-        try:
-            data: ReviewData | None = task_output.pydantic
-            if data is None:
-                return True
-            return data.review_count < MIN_REVIEW_COUNT or data.confidence < MIN_CONFIDENCE
-        except Exception:
-            return True
-
     client = _supabase()
+    _prev_env: dict[str, str | None] = {}
     try:
+        # First write ASAP: if this thread dies later (imports / OOM), the marker
+        # shows how far it got instead of an eternal silent "running".
+        client.table("analysis_runs").update(
+            {"progress_pct": 0, "progress_msg": json.dumps({"done": [], "note": "Готовлю окружение…"}, ensure_ascii=False)}
+        ).eq("id", run_id).execute()
+
+        # BYOK: inject user's API keys into os.environ for this run
+        user_keys = _load_user_keys(user_id)
+        for env_var, value in user_keys.items():
+            _prev_env[env_var] = os.environ.get(env_var)
+            os.environ[env_var] = value
+
+        from crewai import ConditionalTask, Crew, Process
+
+        from agents.analyst_agent import create_analyst_agent, create_analyst_task
+        from agents.business_context_agent import (
+            create_business_context_agent,
+            create_business_context_task,
+        )
+        from agents.competitor_finder_agent import (
+            create_competitor_finder_agent,
+            create_competitor_finder_task,
+        )
+        from agents.manager_agent import create_manager_agent
+        from agents.news_agent import create_news_agent, create_news_task
+        from agents.report_writer_agent import create_report_writer_agent, create_report_task
+        from agents.reviews_agent import create_reviews_agent, create_reviews_task
+        from config.limits import MIN_CONFIDENCE, MIN_REVIEW_COUNT
+        from models.schemas import ReviewData
+
+        _PERIOD_ESCALATION = {"30d": "90d", "90d": "6m", "6m": "6m"}
+        extended_period = _PERIOD_ESCALATION[period]
+
+        def _needs_retry(task_output) -> bool:
+            try:
+                data: ReviewData | None = task_output.pydantic
+                if data is None:
+                    return True
+                return data.review_count < MIN_REVIEW_COUNT or data.confidence < MIN_CONFIDENCE
+            except Exception:
+                return True
+
         # Per-agent model choice ("сменные мозги"): resolve+validate each agent's
         # model (explicit override → global model → smart default). Fails fast
         # with a clear message if a chosen model has no key.

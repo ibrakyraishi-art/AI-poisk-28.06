@@ -9,28 +9,52 @@
 
 Зависит от SQL-функции public.match_embeddings() в Supabase.
 Переменные окружения: SUPABASE_URL, SUPABASE_SERVICE_KEY.
+
+Эмбеддинги: fastembed (ONNX) с моделью all-MiniLM-L6-v2 (384-dim) —
+сознательно НЕ sentence-transformers: тот тянет torch, чей импорт съедает
+сотни МБ и убивает процесс на Render free tier (512 MB). Импорт ленивый.
+Если движок эмбеддингов недоступен (нет RAM/пакета), память деградирует в
+no-op: сохранения пропускаются, поиск возвращает пусто — пайплайн при этом
+продолжает работать, т.к. агенты передают результаты через context=.
 """
 from __future__ import annotations
 
 import os
 from typing import Any
 
-from sentence_transformers import SentenceTransformer
 from supabase import Client, create_client
 
 from config.limits import COSINE_THRESHOLD, NEW_TOPIC_MIN_RATIO
 
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+# fastembed's name for the same 384-dim MiniLM model
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-_model_instance: SentenceTransformer | None = None
+_embedder: Any | None = None
+_embed_failed = False  # once True, memory becomes a silent no-op
 _client_instance: Client | None = None
 
 
-def _model() -> SentenceTransformer:
-    global _model_instance
-    if _model_instance is None:
-        _model_instance = SentenceTransformer(EMBEDDING_MODEL)
-    return _model_instance
+def _embed_texts(texts: list[str]) -> list[list[float]] | None:
+    """Normalized 384-dim vectors, or None when embeddings are unavailable."""
+    global _embedder, _embed_failed
+    if _embed_failed:
+        return None
+    try:
+        if _embedder is None:
+            from fastembed import TextEmbedding  # lazy: keeps module import light
+            _embedder = TextEmbedding(EMBEDDING_MODEL)
+        import numpy as np
+
+        vectors: list[list[float]] = []
+        for vec in _embedder.embed(texts):
+            arr = np.asarray(vec, dtype=float)
+            norm = float(np.linalg.norm(arr)) or 1.0
+            vectors.append((arr / norm).tolist())
+        return vectors
+    except Exception as exc:  # ImportError, MemoryError, model download failure…
+        _embed_failed = True
+        print(f"[vector_store] embeddings disabled, memory is a no-op: {exc!r}")
+        return None
 
 
 def _client() -> Client:
@@ -46,8 +70,11 @@ def _client() -> Client:
 
 
 def embed(text: str) -> list[float]:
-    """384-мерный вектор для текста. normalize_embeddings=True → единичная длина."""
-    return _model().encode(text, normalize_embeddings=True).tolist()
+    """384-мерный нормированный вектор. Бросает RuntimeError, если движок недоступен."""
+    vectors = _embed_texts([text])
+    if vectors is None:
+        raise RuntimeError("Embedding engine unavailable")
+    return vectors[0]
 
 
 def save(
@@ -81,11 +108,14 @@ def save_batch(
 
     Эмбеддинги генерируются батчем (один проход модели вместо N),
     INSERT — один запрос вместо N. Используй для сохранения отзывов.
+    Если эмбеддинги недоступны — тихо пропускаем (память опциональна).
     """
     if not items:
         return
     texts = [item["content"] for item in items]
-    vectors = _model().encode(texts, normalize_embeddings=True).tolist()
+    vectors = _embed_texts(texts)
+    if vectors is None:
+        return
     rows = [
         {
             "run_id": run_id,
@@ -110,11 +140,15 @@ def search(
     Вернуть top-k семантически близких чанков для данного run_id.
     Использует SQL-функцию match_embeddings() c оператором <=> (cosine).
     Каждый результат: {id, content, agent, source_url, similarity}.
+    Если эмбеддинги недоступны — пустой список.
     """
+    vectors = _embed_texts([query])
+    if vectors is None:
+        return []
     result = _client().rpc(
         "match_embeddings",
         {
-            "query_embedding": embed(query),
+            "query_embedding": vectors[0],
             "match_run_id": run_id,
             "match_count": limit,
         },
@@ -129,8 +163,9 @@ def is_saturated(texts: list[str], *, run_id: str) -> bool:
 
     Логика: если ближайший сохранённый вектор имеет similarity >= COSINE_THRESHOLD,
     текст считается уже известной темой. Если таких >95% — стоп.
+    Без эмбеддингов насыщение не наступает никогда (False).
     """
-    if not texts:
+    if not texts or _embed_failed:
         return False
 
     new_count = sum(

@@ -9,6 +9,24 @@ async function authHeaders(): Promise<Record<string, string>> {
   return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
 }
 
+/**
+ * fetch с авторетраем на сетевых сбоях. Render (free tier) иногда отдаёт
+ * разовые 503 без CORS-заголовков — браузер видит их как "Failed to fetch".
+ * Повторная попытка через пару секунд почти всегда проходит.
+ */
+async function fetchWithRetry(url: string, init: RequestInit, attempts = 3): Promise<Response> {
+  let lastErr: unknown;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      return await fetch(url, init);
+    } catch (e) {
+      lastErr = e;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 1500 * (i + 1)));
+    }
+  }
+  throw lastErr;
+}
+
 export interface AnalyzeRequest {
   company: string;
   period: "30d" | "90d" | "6m";
@@ -47,7 +65,7 @@ export interface AnalysisRun {
 
 export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: string; status: string }> {
   const headers = await authHeaders();
-  const res = await fetch(`${API_URL}/analyze`, {
+  const res = await fetchWithRetry(`${API_URL}/analyze`, {
     method: "POST",
     headers,
     body: JSON.stringify(req),
@@ -62,7 +80,7 @@ export async function startAnalysis(req: AnalyzeRequest): Promise<{ run_id: stri
 /** Approve the proposed plan (with an edited competitor list) → phase 2. */
 export async function approveAnalysis(runId: string, competitors: string[]): Promise<{ run_id: string }> {
   const headers = await authHeaders();
-  const res = await fetch(`${API_URL}/analyze/${runId}/approve`, {
+  const res = await fetchWithRetry(`${API_URL}/analyze/${runId}/approve`, {
     method: "POST",
     headers,
     body: JSON.stringify({ competitors }),
