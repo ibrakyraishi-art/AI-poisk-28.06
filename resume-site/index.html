@@ -1,0 +1,678 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ибрагим Курайши — трекер кандидата</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --plane:#0b0e13;
+    --surface:#121721;
+    --surface-2:#0e1119;
+    --ink:#f2f5f8;
+    --ink-2:#93a0af;
+    --ink-3:#5c6875;
+    --hairline:rgba(255,255,255,.08);
+    --accent:#fdb022;
+    --accent-ink:#1a1204;
+    --good:#0ca30c;
+    --s1:#3987e5; --s2:#008300; --s3:#d55181; --s4:#c98500;
+    --f1:#86b6ef; --f2:#5598e7; --f3:#3987e5; --f4:#2a78d6; --f5:#1c5cab;
+    --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,"Liberation Mono",monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--plane);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.55;
+    padding-bottom:64px;
+  }
+  a{color:inherit}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 20px}
+
+  /* ── app chrome ─────────────────────────────── */
+  .chrome{
+    position:sticky;top:0;z-index:20;
+    background:color-mix(in srgb, var(--plane) 88%, transparent);
+    backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--hairline);
+  }
+  .chrome-in{
+    display:flex;align-items:center;gap:16px;
+    padding:12px 20px;max-width:1160px;margin:0 auto;
+    font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  }
+  .logo{color:var(--ink);font-weight:700;letter-spacing:.08em}
+  .logo b{color:var(--accent);font-weight:700}
+  .chrome-item{display:none}
+  .chrome .spacer{flex:1}
+  .live{display:flex;align-items:center;gap:7px;color:var(--good);font-weight:700;letter-spacing:.08em}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--good);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @media(min-width:720px){.chrome-item{display:block}}
+
+  /* ── hero campaign card ─────────────────────── */
+  .hero{padding:48px 0 8px}
+  .eyebrow{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--ink-3);margin:0 0 14px;
+  }
+  .eyebrow .st{color:var(--good)}
+  h1{
+    font-size:clamp(30px,5.4vw,52px);line-height:1.05;margin:0 0 6px;
+    font-weight:800;letter-spacing:-.02em;text-wrap:balance;
+  }
+  .role{
+    font-family:var(--mono);font-size:clamp(14px,2.2vw,18px);
+    color:var(--accent);margin:0 0 20px;letter-spacing:.02em;
+  }
+  .about{max-width:62ch;color:var(--ink-2);margin:0 0 22px}
+  .about b{color:var(--ink);font-weight:600}
+  .meta-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px}
+  .chip{
+    font-family:var(--mono);font-size:12px;color:var(--ink-2);
+    border:1px solid var(--hairline);border-radius:999px;padding:5px 12px;
+    background:var(--surface-2);
+  }
+  .cta{
+    display:inline-flex;align-items:center;gap:10px;
+    background:var(--accent);color:var(--accent-ink);
+    font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.03em;
+    padding:13px 22px;border-radius:8px;text-decoration:none;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .cta:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(253,176,34,.25)}
+  .cta:focus-visible,a:focus-visible,button:focus-visible,summary:focus-visible{
+    outline:2px solid var(--accent);outline-offset:3px;border-radius:4px;
+  }
+
+  /* ── sections & cards ───────────────────────── */
+  section{padding:26px 0 6px}
+  .sec-head{
+    display:flex;align-items:baseline;gap:12px;margin:0 0 14px;
+    font-family:var(--mono);
+  }
+  .sec-head h2{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);margin:0;font-weight:700}
+  .sec-head .note{font-size:12px;color:var(--ink-3)}
+  .card{
+    background:var(--surface);border:1px solid var(--hairline);
+    border-radius:12px;padding:20px;
+  }
+
+  /* ── KPI tiles ──────────────────────────────── */
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media(min-width:820px){.kpis{grid-template-columns:repeat(4,1fr)}}
+  .kpi .v{
+    font-family:var(--mono);font-size:clamp(26px,3.4vw,36px);font-weight:700;
+    color:var(--ink);letter-spacing:-.02em;line-height:1.1;
+    font-variant-numeric:tabular-nums;
+  }
+  .kpi .v small{font-size:.5em;color:var(--ink-2);font-weight:600}
+  .kpi .l{font-size:13px;color:var(--ink-2);margin-top:6px}
+
+  /* ── funnel ─────────────────────────────────── */
+  .grid-2{display:grid;gap:12px}
+  @media(min-width:920px){.grid-2{grid-template-columns:3fr 2fr}}
+  .fstage{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:center;padding:7px 0}
+  @media(max-width:560px){.fstage{grid-template-columns:1fr;gap:4px}}
+  .fstage .fl{font-family:var(--mono);font-size:12px;color:var(--ink-2);text-align:right}
+  @media(max-width:560px){.fstage .fl{text-align:left}}
+  .fbar{
+    height:34px;border-radius:0 4px 4px 0;display:flex;align-items:center;
+    padding:0 12px;font-family:var(--mono);font-size:12px;font-weight:700;
+    color:#fff;white-space:nowrap;min-width:fit-content;
+  }
+  .fstage.you .fbar{outline:2px solid var(--accent);outline-offset:2px}
+  .fstage.you .fl{color:var(--accent);font-weight:700}
+  .fstage.pending .fbar{
+    background:transparent!important;border:1.5px dashed var(--ink-3);
+    color:var(--ink-2);border-radius:4px;
+  }
+  .funnel-note{font-size:13px;color:var(--ink-3);margin-top:14px}
+  .funnel-note b{color:var(--accent);font-weight:600}
+
+  /* ── event log console ──────────────────────── */
+  .console{
+    background:var(--surface-2);border:1px solid var(--hairline);border-radius:12px;
+    display:flex;flex-direction:column;min-height:280px;max-height:380px;
+  }
+  .console-bar{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;
+    border-bottom:1px solid var(--hairline);
+    font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.1em;
+  }
+  .console-bar .dots{display:flex;gap:5px}
+  .console-bar .dots i{width:9px;height:9px;border-radius:50%;background:var(--ink-3);opacity:.4}
+  #log{
+    flex:1;overflow-y:auto;padding:12px 14px;margin:0;list-style:none;
+    font-family:var(--mono);font-size:12px;line-height:1.9;
+  }
+  #log li{display:flex;gap:10px;color:var(--ink-2)}
+  #log .t{color:var(--ink-3);flex-shrink:0;font-variant-numeric:tabular-nums}
+  #log .e{color:var(--s1)}
+  #log li.hot .e{color:var(--accent)}
+  #log li.conv .e{color:var(--good);font-weight:700}
+  .prob{
+    border-top:1px solid var(--hairline);padding:12px 14px;
+    font-family:var(--mono);font-size:12px;color:var(--ink-2);
+  }
+  .prob-track{height:6px;background:var(--surface);border-radius:99px;margin-top:8px;overflow:hidden}
+  .prob-fill{height:100%;width:12%;background:var(--good);border-radius:99px;transition:width .6s ease}
+
+  /* ── conversion events (results) ────────────── */
+  .events{display:grid;gap:10px}
+  @media(min-width:820px){.events{grid-template-columns:1fr 1fr}}
+  .event{display:flex;gap:14px;align-items:flex-start}
+  .event .mark{
+    flex-shrink:0;width:22px;height:22px;border-radius:50%;margin-top:2px;
+    border:1.5px solid var(--good);color:var(--good);
+    display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;
+  }
+  .event .en{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.04em;display:block;margin-bottom:3px}
+  .event .ed{font-size:14px;color:var(--ink-2)}
+  .event .ed b{color:var(--ink);font-weight:600}
+
+  /* ── campaigns table (experience) ───────────── */
+  .camp{border-top:1px solid var(--hairline)}
+  .camp:first-of-type{border-top:none}
+  .camp summary{
+    list-style:none;cursor:pointer;padding:16px 4px;
+    display:grid;grid-template-columns:24px 1.4fr 1fr auto;gap:12px;align-items:center;
+  }
+  .camp summary::-webkit-details-marker{display:none}
+  .camp .tw{color:var(--ink-3);font-size:12px;transition:transform .15s ease}
+  .camp[open] .tw{transform:rotate(90deg)}
+  .camp .cn{font-weight:700}
+  .camp .cn small{display:block;font-weight:400;font-size:13px;color:var(--ink-2)}
+  .camp .cp{font-family:var(--mono);font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums}
+  .badge{
+    font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;
+    padding:4px 10px;border-radius:999px;white-space:nowrap;
+  }
+  .badge.run{color:var(--good);border:1px solid color-mix(in srgb,var(--good) 45%,transparent)}
+  .badge.done{color:var(--ink-2);border:1px solid var(--hairline)}
+  .camp-body{padding:2px 4px 18px 36px;color:var(--ink-2)}
+  .camp-body ul{margin:0 0 14px;padding-left:18px}
+  .camp-body li{margin:5px 0;font-size:14px}
+  .camp-body li b{color:var(--ink);font-weight:600}
+  .clients{display:flex;flex-wrap:wrap;gap:7px}
+  .clients .cl{
+    font-family:var(--mono);font-size:11px;color:var(--ink);
+    background:var(--surface-2);border:1px solid var(--hairline);
+    border-radius:5px;padding:4px 9px;
+  }
+  .clients-l{font-family:var(--mono);font-size:11px;color:var(--ink-3);letter-spacing:.08em;margin:0 0 8px;text-transform:uppercase}
+  @media(max-width:640px){
+    .camp summary{grid-template-columns:24px 1fr auto}
+    .camp .cp{display:none}
+    .camp-body{padding-left:4px}
+  }
+
+  /* ── sources (skills) ───────────────────────── */
+  .sources{display:grid;gap:12px}
+  @media(min-width:820px){.sources{grid-template-columns:1fr 1fr}}
+  .src-head{display:flex;align-items:center;gap:9px;margin-bottom:12px}
+  .src-head i{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+  .src-head h3{margin:0;font-size:14px;font-weight:700}
+  .src-head .cnt{font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-left:auto}
+  .tags{display:flex;flex-wrap:wrap;gap:7px}
+  .tag{
+    font-size:12.5px;color:var(--ink-2);
+    border:1px solid var(--hairline);border-radius:6px;padding:5px 10px;
+    background:var(--surface-2);
+  }
+
+  /* ── antifraud ──────────────────────────────── */
+  .af{display:grid;gap:12px}
+  @media(min-width:820px){.af{grid-template-columns:2fr 1fr;align-items:stretch}}
+  .af-checks{display:grid;gap:10px}
+  .af-check{display:flex;gap:11px;align-items:baseline;font-size:14px;color:var(--ink-2)}
+  .af-check .ok{color:var(--good);font-family:var(--mono);font-weight:700;flex-shrink:0}
+  .af-check b{color:var(--ink);font-weight:600}
+  .verdict{
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;
+    text-align:center;border:1px solid color-mix(in srgb,var(--good) 40%,transparent);
+    border-radius:12px;padding:20px;background:color-mix(in srgb,var(--good) 6%,var(--surface));
+  }
+  .verdict .vt{font-family:var(--mono);font-size:13px;font-weight:700;letter-spacing:.12em;color:var(--good)}
+  .verdict .vs{font-size:12px;color:var(--ink-2)}
+
+  /* ── footer CTA ─────────────────────────────── */
+  .final{margin:34px 0 40px;text-align:center;padding:44px 24px}
+  .final .eyebrow{margin-bottom:10px}
+  .final h2{font-size:clamp(22px,3.6vw,32px);margin:0 0 10px;letter-spacing:-.01em;text-wrap:balance}
+  .final p{color:var(--ink-2);max-width:52ch;margin:0 auto 24px}
+  .contacts{display:flex;flex-wrap:wrap;gap:10px;justify-content:center}
+  .contact{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:13px;color:var(--ink);
+    border:1px solid var(--hairline);border-radius:8px;padding:11px 16px;
+    text-decoration:none;background:var(--surface-2);
+    transition:border-color .12s ease;
+  }
+  .contact:hover{border-color:var(--accent)}
+  .footnote{
+    text-align:center;font-family:var(--mono);font-size:11px;color:var(--ink-3);
+    padding-bottom:30px;
+  }
+
+  /* ── sticky ticker ──────────────────────────── */
+  .ticker{
+    position:fixed;left:0;right:0;bottom:0;z-index:30;
+    background:color-mix(in srgb, var(--surface-2) 92%, transparent);
+    backdrop-filter:blur(8px);
+    border-top:1px solid var(--hairline);
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-2);
+  }
+  .ticker-in{
+    max-width:1160px;margin:0 auto;padding:9px 20px;
+    display:flex;gap:18px;align-items:center;overflow:hidden;white-space:nowrap;
+  }
+  .ticker .k{color:var(--ink-3)}
+  .ticker .v{color:var(--ink);font-variant-numeric:tabular-nums}
+  .ticker .last{overflow:hidden;text-overflow:ellipsis;color:var(--s1)}
+  .ticker .spacer{flex:1}
+  @media(max-width:640px){.ticker .hide-m{display:none}}
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+
+<!-- ══ app chrome ══ -->
+<header class="chrome">
+  <div class="chrome-in">
+    <span class="logo">IK<b>·</b>TRACKER</span>
+    <span class="chrome-item">кампания: <b style="color:var(--ink)">найм_ибрагим_курайши</b></span>
+    <span class="chrome-item">период: 2023 → 2026</span>
+    <span class="spacer"></span>
+    <span class="live"><span class="dot"></span>LIVE</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- ══ hero ══ -->
+  <section class="hero">
+    <p class="eyebrow">кампания #0001 · цель: оффер · статус: <span class="st">активна</span></p>
+    <h1>Ибрагим Курайши</h1>
+    <p class="role">Project Manager · Performance Marketing</p>
+    <p class="about">
+      Обычно я настраиваю трекинг для рекламных кампаний с бюджетом <b>80 млн ₽/мес</b>.
+      Сегодня трекер настроен на вас: вы — трафик, оффер — целевое действие.
+      Этот сайт и есть моё резюме — воронка ниже покажет, на каком вы шаге.
+    </p>
+    <div class="meta-chips">
+      <span class="chip">Москва</span>
+      <span class="chip">23 года</span>
+      <span class="chip">полная занятость</span>
+      <span class="chip">офис / гибрид</span>
+      <span class="chip">опыт 3 г 2 мес</span>
+    </div>
+    <a class="cta" href="https://t.me/ivavon" id="cta-top">Запросить интервью → Telegram</a>
+  </section>
+
+  <!-- ══ KPI ══ -->
+  <section id="kpi">
+    <div class="sec-head"><h2>Ключевые метрики</h2><span class="note">данные из резюме, без накрутки</span></div>
+    <div class="kpis">
+      <div class="card kpi">
+        <div class="v"><span data-count="80">0</span> <small>млн ₽/мес</small></div>
+        <div class="l">бюджет под управлением: медиасплит, ресурсы, эффективность</div>
+      </div>
+      <div class="card kpi">
+        <div class="v"><span data-count="20">0</span>+ <small>источников</small></div>
+        <div class="l">веду руками, без автостратегий — понимаю закупку изнутри</div>
+      </div>
+      <div class="card kpi">
+        <div class="v"><span data-count="6">0</span> <small>клиентов</small></div>
+        <div class="l">крупные бренды: Sportmaster, Yango, Циан, Столото, 585, ВкусВилл</div>
+      </div>
+      <div class="card kpi">
+        <div class="v"><span data-count="3">0</span> <small>трекера</small></div>
+        <div class="l">AppsFlyer, Adjust, AppMetrica — плюс SKAN, SSOT и DataLens</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ funnel + live console ══ -->
+  <section id="funnel">
+    <div class="sec-head"><h2>Воронка найма</h2><span class="note">вы находитесь внутри неё прямо сейчас</span></div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="fstage">
+          <span class="fl">показ резюме</span>
+          <div class="fbar" style="width:100%;background:var(--f1);color:#0b2545">выполнено ✓</div>
+        </div>
+        <div class="fstage">
+          <span class="fl">клик</span>
+          <div class="fbar" style="width:86%;background:var(--f2);color:#0b2545">выполнено ✓</div>
+        </div>
+        <div class="fstage you">
+          <span class="fl">просмотр сайта</span>
+          <div class="fbar" style="width:72%;background:var(--f3)">вы здесь</div>
+        </div>
+        <div class="fstage pending">
+          <span class="fl">интервью</span>
+          <div class="fbar" style="width:58%;background:var(--f4)">ожидает вашего действия</div>
+        </div>
+        <div class="fstage pending">
+          <span class="fl">оффер</span>
+          <div class="fbar" style="width:44%;background:var(--f5)">целевое действие</div>
+        </div>
+        <p class="funnel-note">Конверсия из просмотра в интервью зависит только от вас.
+          <b>CPL = 0 ₽</b> — органический лид уже в воронке.</p>
+      </div>
+
+      <div class="console" aria-label="Поток событий вашей сессии">
+        <div class="console-bar">
+          <span class="dots"><i></i><i></i><i></i></span>
+          ПОТОК СОБЫТИЙ · ВАША СЕССИЯ
+        </div>
+        <ul id="log"></ul>
+        <div class="prob">
+          вероятность интервью: <span id="prob-v" style="color:var(--good);font-weight:700">12%</span>
+          <div class="prob-track"><div class="prob-fill" id="prob-fill"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ key results as conversion events ══ -->
+  <section id="results">
+    <div class="sec-head"><h2>Конверсионные события</h2><span class="note">ключевые результаты за карьеру</span></div>
+    <div class="card events">
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">budget_management · 80M</span>
+        <span class="ed">Управлял бюджетом <b>80 млн ₽/мес</b>: планирование медиасплита, распределение ресурсов, контроль эффективности.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">ssot_migration_completed</span>
+        <span class="ed">Возглавил переход на <b>SSOT в AppsFlyer</b> — единый источник данных, устранил расхождения в отчётности.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">strategy_defended</span>
+        <span class="ed">Разрабатывал и защищал перед клиентами стратегии <b>UA и ретаргетинга</b>.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">cross_channel_analytics</span>
+        <span class="ed">Выстроил <b>кросс-канальную аналитику</b> и проверку данных в трекерах: AppsFlyer, Adjust, AppMetrica.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">antifraud_monitoring_live</span>
+        <span class="ed">Построил контроль качества: <b>антифрод-мониторинг</b> и автоотчётность в DataLens.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">ai_tools_shipped</span>
+        <span class="ed">Запустил внутренние <b>AI-инструменты на Cursor</b> для ускорения работы команды.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">team_upskilled</span>
+        <span class="ed">Развивал команду: обучение специалистов, воркшопы по сложным источникам — <b>ASA, SRN, OEM</b>.</span>
+      </div></div>
+      <div class="event"><span class="mark">✓</span><div>
+        <span class="en">hands_on_buying</span>
+        <span class="ed">Сам веду <b>20+ источников руками</b>, без автостратегий — руковожу проектами, понимая закупку изнутри.</span>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ══ experience as campaigns ══ -->
+  <section id="exp">
+    <div class="sec-head"><h2>Кампании</h2><span class="note">опыт работы · разверните строку</span></div>
+    <div class="card" style="padding:4px 20px">
+      <details class="camp" open>
+        <summary>
+          <span class="tw">▶</span>
+          <span class="cn">Go Ahead <small>Project Manager · Performance Marketing</small></span>
+          <span class="cp">фев 2025 → июн 2026 · 1 г 5 мес</span>
+          <span class="badge run">ПОСЛЕДНЯЯ</span>
+        </summary>
+        <div class="camp-body">
+          <ul>
+            <li>Руководство performance-проектами для крупных клиентов: <b>от стратегии до контроля результата</b>.</li>
+            <li>Ответственность за бюджет и эффективность медиасплита с оборотом <b>80 млн ₽/мес</b>.</li>
+            <li>Координация аналитики, отчётности и контроля качества между клиентами и командой.</li>
+            <li>Прямая работа с клиентами: планирование, распределение ресурсов, защита стратегий.</li>
+          </ul>
+          <p class="clients-l">клиенты</p>
+          <div class="clients"><span class="cl">Sportmaster</span><span class="cl">Yango</span><span class="cl">Циан</span></div>
+        </div>
+      </details>
+      <details class="camp">
+        <summary>
+          <span class="tw">▶</span>
+          <span class="cn">Artics Internet Solutions <small>User Acquisition · контекстная реклама</small></span>
+          <span class="cp">май 2023 → фев 2025 · 1 г 10 мес</span>
+          <span class="badge done">ЗАВЕРШЕНА</span>
+        </summary>
+        <div class="camp-body">
+          <ul>
+            <li>Вёл performance-направление по web и app: <b>Яндекс Директ, VK, OEM и in-app</b>.</li>
+            <li>Запускал и оптимизировал web-to-app и app-кампании, контролировал <b>CPA, CPI, ROAS</b>.</li>
+            <li>Выстраивал сквозную аналитику: источники → трекеры → CRM → продуктовые данные, весь путь от клика до целевого действия.</li>
+            <li>Вёл и оптимизировал in-app источники: <b>Mintegral, Moloco, Unity</b> и другие сети.</li>
+            <li>Автоматизировал отчётность: дашборды и регулярные отчёты по каналам, креативам и сегментам.</li>
+            <li>Работал с антифрод-решениями: анализ подозрительных источников, аномалий, некорректных установок.</li>
+          </ul>
+          <p class="clients-l">клиенты</p>
+          <div class="clients"><span class="cl">Столото</span><span class="cl">585 Золотой</span><span class="cl">ВкусВилл</span></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- ══ skills as traffic sources ══ -->
+  <section id="skills">
+    <div class="sec-head"><h2>Источники и инструменты</h2><span class="note">что веду и чем работаю</span></div>
+    <div class="sources">
+      <div class="card">
+        <div class="src-head"><i style="background:var(--s1)"></i><h3>Закупка рекламы</h3><span class="cnt">20+ источников</span></div>
+        <div class="tags">
+          <span class="tag">ASA</span><span class="tag">Google</span><span class="tag">TikTok</span>
+          <span class="tag">Meta</span><span class="tag">OEM · Huawei</span><span class="tag">Moloco</span>
+          <span class="tag">Unity</span><span class="tag">Mintegral</span><span class="tag">Яндекс</span><span class="tag">VK</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="src-head"><i style="background:var(--s2)"></i><h3>Аналитика и данные</h3><span class="cnt">8 инструментов</span></div>
+        <div class="tags">
+          <span class="tag">AppsFlyer</span><span class="tag">Adjust</span><span class="tag">AppMetrica</span>
+          <span class="tag">SKAN</span><span class="tag">SSOT</span><span class="tag">DataLens</span>
+          <span class="tag">Google Sheets</span><span class="tag">Excel</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="src-head"><i style="background:var(--s3)"></i><h3>Управление и проекты</h3><span class="cnt">ядро роли</span></div>
+        <div class="tags">
+          <span class="tag">проекты и бюджеты</span><span class="tag">планирование</span>
+          <span class="tag">распределение ресурсов</span><span class="tag">работа с клиентами</span>
+          <span class="tag">построение процессов</span><span class="tag">антифрод</span>
+          <span class="tag">обучение сотрудников</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="src-head"><i style="background:var(--s4)"></i><h3>AI и автоматизация</h3><span class="cnt">внедряю в команде</span></div>
+        <div class="tags">
+          <span class="tag">Cursor</span><span class="tag">LLM / prompt engineering</span>
+          <span class="tag">Sora</span><span class="tag">Banana</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ antifraud check ══ -->
+  <section id="antifraud">
+    <div class="sec-head"><h2>Антифрод-проверка кандидата</h2><span class="note">проверено теми же методами, что и трафик</span></div>
+    <div class="af">
+      <div class="card af-checks">
+        <div class="af-check"><span class="ok">[✓]</span><span><b>Трафик органический</b> — кандидат пришёл сам, мотив не накручен.</span></div>
+        <div class="af-check"><span class="ok">[✓]</span><span><b>Опыт подтверждается руками</b> — не только управляет, но и сам ведёт источники.</span></div>
+        <div class="af-check"><span class="ok">[✓]</span><span><b>Данные консистентны</b> — цифры в резюме сходятся между разделами, как в SSOT.</span></div>
+        <div class="af-check"><span class="ok">[✓]</span><span><b>Аномалий не выявлено</b> — 3 года стабильного роста: специалист → руководитель проектов.</span></div>
+        <div class="af-check"><span class="ok">[✓]</span><span><b>Публичная активность</b> — авторский канал о mobile-аналитике и UA: t.me/closedhypothesis.</span></div>
+      </div>
+      <div class="verdict">
+        <span class="vt">ФРОД НЕ ОБНАРУЖЕН</span>
+        <span class="vs">кандидат допущен к интервью</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ final CTA ══ -->
+  <section class="final card">
+    <p class="eyebrow">целевое действие</p>
+    <h2>Сконвертируйте этот просмотр в интервью</h2>
+    <p>Отвечаю быстро — как трекер на постбек. Telegram — предпочитаемый способ связи.</p>
+    <div class="contacts">
+      <a class="contact" href="https://t.me/ivavon" id="cta-tg">Telegram · @ivavon</a>
+      <a class="contact" href="tel:+79280813084">+7 (928) 081-30-84</a>
+      <a class="contact" href="mailto:kyraishi1234567@mail.ru">kyraishi1234567@mail.ru</a>
+      <a class="contact" href="https://t.me/closedhypothesis">канал · closedhypothesis</a>
+    </div>
+  </section>
+
+  <p class="footnote">Ибрагим Курайши · Москва · сайт-трекер вместо резюме · все цифры — из реального опыта</p>
+</main>
+
+<!-- ══ sticky session ticker ══ -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-in">
+    <span><span class="k">сессия:</span> <span class="v" id="tk-time">00:00</span></span>
+    <span class="hide-m"><span class="k">глубина:</span> <span class="v" id="tk-depth">0%</span></span>
+    <span class="hide-m"><span class="k">события:</span> <span class="v" id="tk-events">0</span></span>
+    <span class="last" id="tk-last">session_start</span>
+    <span class="spacer"></span>
+    <span class="hide-m"><span class="k">статус лида:</span> <span class="v" id="tk-status" style="color:var(--good)">новый</span></span>
+  </div>
+</div>
+
+<script>
+(function(){
+  var log = document.getElementById('log');
+  var probV = document.getElementById('prob-v');
+  var probFill = document.getElementById('prob-fill');
+  var tkTime = document.getElementById('tk-time');
+  var tkDepth = document.getElementById('tk-depth');
+  var tkEvents = document.getElementById('tk-events');
+  var tkLast = document.getElementById('tk-last');
+  var tkStatus = document.getElementById('tk-status');
+
+  var start = performance.now();
+  var eventCount = 0;
+  var prob = 12;
+  var statuses = [[30,'тёплый'],[55,'горячий'],[80,'очень горячий'],[95,'практически оффер']];
+
+  function pad(n){ return (n<10?'0':'')+n; }
+  function stamp(){
+    var s = Math.floor((performance.now()-start)/1000);
+    return pad(Math.floor(s/60))+':'+pad(s%60);
+  }
+  function bumpProb(d){
+    prob = Math.min(97, prob + d);
+    probV.textContent = prob + '%';
+    probFill.style.width = prob + '%';
+    for (var i=statuses.length-1;i>=0;i--){
+      if (prob >= statuses[i][0]) { tkStatus.textContent = statuses[i][1]; break; }
+    }
+  }
+  function track(name, note, cls, dProb){
+    eventCount++;
+    var li = document.createElement('li');
+    if (cls) li.className = cls;
+    li.innerHTML = '<span class="t">'+stamp()+'</span><span class="e">'+name+'</span>'
+      + (note ? '<span>'+note+'</span>' : '');
+    log.appendChild(li);
+    log.scrollTop = log.scrollHeight;
+    tkLast.textContent = name;
+    tkEvents.textContent = eventCount;
+    if (dProb) bumpProb(dProb);
+    while (log.children.length > 60) log.removeChild(log.firstChild);
+  }
+
+  // session clock
+  setInterval(function(){ tkTime.textContent = stamp(); }, 1000);
+
+  // opening events
+  track('session_start', 'источник: hr', '', 0);
+  setTimeout(function(){ track('page_view', 'резюме-трекер', '', 0); }, 600);
+  setTimeout(function(){ track('attribution', 'органика, фрод не обнаружен', '', 2); }, 1400);
+
+  // scroll depth
+  var depths = [25,50,75,100], fired = {};
+  var maxDepth = 0;
+  window.addEventListener('scroll', function(){
+    var h = document.documentElement;
+    var d = Math.min(100, Math.round((h.scrollTop + window.innerHeight) / h.scrollHeight * 100));
+    if (d > maxDepth){ maxDepth = d; tkDepth.textContent = d + '%'; }
+    depths.forEach(function(x){
+      if (d >= x && !fired['d'+x]){
+        fired['d'+x] = true;
+        track('scroll_depth_' + x, x===100 ? 'дочитали до конца — сильный сигнал' : null, x>=75?'hot':'', x>=75?8:4);
+      }
+    });
+  }, {passive:true});
+
+  // section views
+  if ('IntersectionObserver' in window){
+    var names = {kpi:'метрики', funnel:'воронка', results:'результаты', exp:'опыт', skills:'источники', antifraud:'антифрод'};
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if (e.isIntersecting && !fired['s'+e.target.id]){
+          fired['s'+e.target.id] = true;
+          track('section_view', names[e.target.id] || e.target.id, '', 2);
+          io.unobserve(e.target);
+        }
+      });
+    }, {threshold:.35});
+    Object.keys(names).forEach(function(id){
+      var el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+  }
+
+  // experience expand (skip the toggle Chromium fires on load for details[open])
+  document.querySelectorAll('details.camp').forEach(function(d){
+    d.addEventListener('toggle', function(){
+      if (performance.now() - start < 1200) return;
+      if (d.open && !fired['x'+d.querySelector('.cn').textContent]){
+        fired['x'+d.querySelector('.cn').textContent] = true;
+        track('campaign_expanded', 'изучают опыт детально', 'hot', 5);
+      }
+    });
+  });
+
+  // CTA signals
+  ['cta-top','cta-tg'].forEach(function(id){
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('mouseenter', function(){
+      if (!fired['h'+id]){ fired['h'+id] = true; track('cta_hover', 'лид прогревается', 'hot', 6); }
+    });
+    el.addEventListener('click', function(){
+      track('conversion', 'переход в telegram — цель достигнута', 'conv', 30);
+    });
+  });
+
+  // KPI counters
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  document.querySelectorAll('[data-count]').forEach(function(el){
+    var target = +el.getAttribute('data-count');
+    if (reduced){ el.textContent = target; return; }
+    var t0 = null;
+    function step(ts){
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / 900);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+
+  // idle nudges — a couple of playful tracker events
+  setTimeout(function(){ track('engagement_score', 'выше среднего по выборке', '', 3); }, 25000);
+  setTimeout(function(){ track('retargeting_hint', 'вернётесь — узнаем: трекер уже стоит', '', 2); }, 55000);
+})();
+</script>
